@@ -1,12 +1,12 @@
-site_name: My Super Cool Respository
+site_name: EarthSystem
 
 
 # Repository
-repo_name: My Super Cool Respository
-repo_url: https://github.com/allfed/My Super-Cool-Respository
+repo_name: EarthSystem
+repo_url:https://github.com/Jakopf4/EarthSystem.git
 edit_uri: ""
 # Copyright
-copyright: Me
+copyright: Jakopf4
 
 docs_dir: "docs/sources"
 
@@ -18,8 +18,8 @@ theme:
   custom_dir: 'docs'
   palette:
     primary: 'white'
-  logo: 'assets/images/logo_full.svg'
-  favicon: 'assets/images/favicon.svg'
+  logo: ''
+  favicon: ''
   features:
     - navigation.tabs
     - navigation.tabs.sticky
