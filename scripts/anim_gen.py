@@ -24,6 +24,11 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
         plot_function = pa.plot_clustering
         plot_name = "clustering"
         out_path = f"../results/Scenario_{scenario}_Clustering.mp4"
+    elif flag == "FFL":
+        PLOT_DIR = f"../results/plots/FFL/Scenario{scenario}"
+        plot_function = pa.plot_ffl
+        plot_name = "ffl"
+        out_path = f"../results/Scenario_{scenario}_FFL.mp4"
 
     if PLOT_DIR is None:
         exit(1)
@@ -32,30 +37,19 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
     years = range(2030, 2100, 1)
     months = range(1, 13, 1)
 
-    needs_plotting = False
     if not os.path.exists(PLOT_DIR):
         os.makedirs(PLOT_DIR)
-        needs_plotting = True
-    elif not os.listdir(PLOT_DIR):
-        needs_plotting = True
 
-    if needs_plotting:
-        print(f"Directory is empty or missing. Generating plots in {PLOT_DIR}...")
-        for year in years:
-            for month in months:
+    for year in years:
+        for month in months:
+            if os.path.exists(os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png")):
+                print(f"  ... plot for {year}-{month:02d} already exists. Skipping.")
+                continue
+            else:
                 plot_function(scenario, year, month)
                 print(f"  ... saved frame for {year}-{month:02d}")
-                frame_files.append(
-                    os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png")
-                )
-
-    else:
-        print(f"Directory {PLOT_DIR} already contains files. Collecting filenames...")
-        for year in years:
-            for month in months:
-                frame_files.append(
-                    os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png")
-                )
+            frame_files.append(
+                os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png"))
 
     print(f"\nCollected {len(frame_files)} frame files.")
 
@@ -114,5 +108,6 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
 
 
 if __name__ == "__main__":
-    scenario = "245"
-    anim_gen(scenario, "InOut")
+    scenario = "585"
+    anim_gen(scenario, "Clustering")
+    # anim_gen(scenario, "FFL")

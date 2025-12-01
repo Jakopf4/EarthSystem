@@ -1,4 +1,7 @@
 """Script to plot a network of data tracks based on connection strengths."""
+from clustering import clustering_coefficients, feed_forward_loop
+from inout import in_degrees, out_degrees
+
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -65,8 +68,9 @@ def plot_evaporation(scenario: str, year: int, month: int) -> None:
     plt.close()
 
 
-def plot_network(scenario: str, year: int, month: int,
-                 CONNECTION_THRESHOLD=CONNECTION_THRESHOLD) -> None:
+def plot_network(
+    scenario: str, year: int, month: int, CONNECTION_THRESHOLD=CONNECTION_THRESHOLD
+) -> None:
     """Plot a network of data tracks based on connection strengths."""
     filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
@@ -125,24 +129,18 @@ def plot_network(scenario: str, year: int, month: int,
     plt.close(fig)
 
 
-def in_degrees(ds: xr.Dataset) -> np.ndarray:
-    """Calculate in-degrees of nodes in the network."""
-    in_values = np.zeros(ds.sizes["y"])
-    for i in range(ds.sizes["y"]):
-        in_values[i] = sum(ds["network"].values[:, i])
-    return in_values
-
-
-def out_degrees(ds: xr.Dataset) -> np.ndarray:
-    """Calculate out-degrees of nodes in the network."""
-    out_values = np.zeros(ds.sizes["y"])
-    for i in range(ds.sizes["y"]):
-        out_values[i] = sum(ds["network"].values[i])
-    return out_values
-
-
 def plot_degrees(scenario: str, year: int, month: int) -> None:
-    """Plot in-degrees and out-degrees from the dataset."""
+    """
+    Plot in-degrees and out-degrees from the dataset.
+
+    Input:
+        Scenario (str): Number of the scenario
+        Year (int): Year number of dataset
+        Month (int): Month to look at
+
+    Output:
+        None, but plots saved to directory
+    """
     filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
@@ -200,6 +198,74 @@ def plot_degrees(scenario: str, year: int, month: int) -> None:
     plt.close(fig)
 
 
+def plot_clustering(scenario: str, year: int, month: int) -> None:
+    """Plot local clustering coefficient from the dataset."""
+    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    ds = xr.open_dataset(filepath)
+
+    for i in range(ds.sizes["y"]):
+        ds["network"].values[i][i] = 0
+
+    plt.figure(figsize=(12, 8))
+
+    plt.suptitle(
+        f"Local Clustering Coefficients - Year: {year}, Month: {month:02d}", fontsize=16
+    )
+
+    sc = plt.scatter(
+        x=ds["lon"].values,
+        y=ds["lat"].values,
+        c=clustering_coefficients(ds),
+        cmap="viridis",
+        s=420,  # Point size
+        marker="s",
+        vmax=1,
+        vmin=0,
+    )
+
+    plt.colorbar(sc, label="Clustering Coefficient")
+
+    plt.grid(True)
+
+    # plt.show()
+    plt.savefig(f"../results/plots/Clustering/Scenario{scenario}/clustering_{scenario}_{year}_{month:02d}.png")
+    plt.close()
+
+
+def plot_ffl(scenario: str, year: int, month: int) -> None:
+    """Plot feed forward loops from the dataset."""
+    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    ds = xr.open_dataset(filepath)
+
+    for i in range(ds.sizes["y"]):
+        ds["network"].values[i][i] = 0
+
+    plt.figure(figsize=(12, 8))
+
+    plt.suptitle(f"Feed Forward Loops - Year: {year}, Month: {month:02d}", fontsize=16)
+
+    sc = plt.scatter(
+        x=ds["lon"].values,
+        y=ds["lat"].values,
+        c=feed_forward_loop(ds),
+        cmap="viridis",
+        s=420,  # Point size
+        marker="s",
+        vmin=0,
+        vmax=550
+    )
+
+    plt.colorbar(sc, label="# Feed Forward Loops")
+
+    plt.grid(True)
+
+    # plt.show()
+    plt.savefig(
+        f"../results/plots/FFL/Scenario{scenario}/ffl_{scenario}_{year}_{month:02d}.png"
+    )
+    plt.close()
+
+
 if __name__ == "__main__":
     scenario = "245"
     year = 2030
@@ -209,3 +275,4 @@ if __name__ == "__main__":
     # plot_evaporation(scenario=scenario, year=year, month=month)
     # plot_network(scenario=scenario, year=year, month=month)
     # plot_degrees(scenario=scenario, year=year, month=month)
+    plot_clustering(scenario=scenario, year=year, month=month)
