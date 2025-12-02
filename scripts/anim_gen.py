@@ -19,11 +19,25 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
         plot_function = pa.plot_degrees
         plot_name = "degrees"
         out_path = f"../results/Scenario_{scenario}_InOutDegrees.mp4"
+
+    elif flag == "YearInOut":
+        PLOT_DIR = f"../results/plots/YearInOut/Scenario{scenario}"
+        plot_function = pa.plot_yearly_degrees
+        plot_name = "yearly_degrees"
+        out_path = f"../results/Scenario_{scenario}_YearInOutDegrees.mp4"
+
+    elif flag == "DiffYearInOut":
+        PLOT_DIR = f"../results/plots/YearInOut/Scenario{scenario}"
+        plot_function = pa.plot_diff_yearly_degrees
+        plot_name = "yearly_diff_degrees"
+        out_path = f"../results/Scenario_{scenario}_YearDiffInOutDegrees.mp4"
+
     elif flag == "Clustering":
         PLOT_DIR = f"../results/plots/Clustering/Scenario{scenario}"
         plot_function = pa.plot_clustering
         plot_name = "clustering"
         out_path = f"../results/Scenario_{scenario}_Clustering.mp4"
+
     elif flag == "FFL":
         PLOT_DIR = f"../results/plots/FFL/Scenario{scenario}"
         plot_function = pa.plot_ffl
@@ -40,40 +54,87 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
     if not os.path.exists(PLOT_DIR):
         os.makedirs(PLOT_DIR)
 
-    for year in years:
-        for month in months:
-            if os.path.exists(os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png")):
-                print(f"  ... plot for {year}-{month:02d} already exists. Skipping.")
+    # --- 2. Frame Generation and Collection Logic ---
+    if plot_function != pa.plot_yearly_degrees and plot_function != pa.plot_diff_yearly_degrees:
+        # Logic for monthly plots
+        for year in years:
+            for month in months:
+                file_path = os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png")
+
+                if os.path.exists(file_path):
+                    print(f"  ... plot for {year}-{month:02d} already exists. Skipping.")
+                    frame_files.append(file_path)
+                    continue
+                else:
+                    try:
+                        plot_function(scenario, year, month)
+                        print(f"  ... saved frame for {year}-{month:02d}")
+                        frame_files.append(file_path)
+                    except Exception as e:
+                        print(f"❌ ERROR: Plotting failed for {year}-{month:02d}. Error: {e}")
+                        continue
+
+    else:
+        # Logic for yearly plots
+        for year in years:
+            file_path = os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}.png")
+
+            if os.path.exists(file_path):
+                print(f"  ... plot for {year} already exists. Skipping.")
+                frame_files.append(file_path)
                 continue
             else:
-                plot_function(scenario, year, month)
-                print(f"  ... saved frame for {year}-{month:02d}")
-            frame_files.append(
-                os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png"))
+                try:
+                    plot_function(scenario, year)
+                    print(f"  ... saved frame for {year}")
+                    frame_files.append(file_path)
+                except Exception as e:
+                    print(f"❌ ERROR: Plotting failed for {year}. Error: {e}")
+                    continue
 
     print(f"\nCollected {len(frame_files)} frame files.")
 
-    frame_list = sorted(
-        frame_files,
-        key=lambda x: (
-            re.search(r"_(\d{4})_", x).group(1),
-            re.search(r"_(\d{2})\.png$", x).group(1),
-        ),
-    )
+    # --- 3. Sorting ---
+    if plot_function == pa.plot_yearly_degrees or plot_function == pa.plot_diff_yearly_degrees:
+        frame_list = sorted(
+            frame_files,
+            key=lambda x: re.search(r"_(\d{4})\.png$", x).group(1),
+        )
+    else:
+        frame_list = sorted(
+            frame_files,
+            key=lambda x: (
+                re.search(r"_(\d{4})_", x).group(1),
+                re.search(r"_(\d{2})\.png$", x).group(1),
+            ),
+        )
 
     print(f"Found {len(frame_list)} images.")
 
+    # --- 4. Temporary Directory Cleanup and Symlink Creation ---
     tmp_dir = f"./tmp_frames_{scenario}"
+
+    # 🌟 FIX for FileExistsError: Clean up stale temporary directory
+    if os.path.exists(tmp_dir):
+        print(f"🗑️  Cleaning up stale temporary directory: {tmp_dir}")
+        shutil.rmtree(tmp_dir)
+
     os.makedirs(tmp_dir, exist_ok=True)
 
     for i, f in enumerate(frame_list):
         link_name = os.path.join(tmp_dir, f"frame_{i:05d}.png")
-        source_file_abs = os.path.abspath(f)
+
+        # 🌟 FIX for CalledProcessError: Use relative paths for symlinks
+        source_file_rel = os.path.relpath(f, start=tmp_dir)
 
         if not os.path.exists(link_name):
-            os.symlink(source_file_abs, link_name)
+            os.symlink(source_file_rel, link_name)
 
-    # Output
+    # --- 5. FFmpeg Execution ---
+    out_dir = os.path.dirname(out_path)
+    if out_dir and not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
     cmd = [
         "ffmpeg",
         "-y",
@@ -90,10 +151,10 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
         out_path,
     ]
 
-    # Run FFmpeg
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, check=True)
 
+    # --- 6. Finalization and Cleanup ---
     if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
         print(f"✅ Movie saved to {out_path}")
         if delete_after:
@@ -103,11 +164,12 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
     else:
         print("❌ Movie creation failed.")
 
-    # Cleanup temporary links
+    # Always clean up the temporary links after use
     shutil.rmtree(tmp_dir)
 
 
 if __name__ == "__main__":
-    scenario = "585"
-    anim_gen(scenario, "Clustering")
+    scenario = "370"
+    anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
+    # anim_gen(scenario, "Clustering")
     # anim_gen(scenario, "FFL")
