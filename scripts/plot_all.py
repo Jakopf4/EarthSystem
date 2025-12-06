@@ -1,5 +1,8 @@
-"""Script to plot a network of data tracks based on connection strengths."""
+"""Script to plot various network metrics and their differences over time."""
+from pathlib import Path
+
 from clustering import clustering_coefficients, feed_forward_loop
+
 from inout import in_degrees, out_degrees, yearly_in_degrees, yearly_out_degrees
 
 import matplotlib.pyplot as plt
@@ -9,11 +12,22 @@ import numpy as np
 import xarray as xr
 
 
-CONNECTION_THRESHOLD = 1.14  # Define a threshold for strong connections
+CONNECTION_THRESHOLD = 1.14  # Threshold for strong connections
 
 
-def plot_precipitation(scenario: str, year: int, month: int) -> None:
-    """Plot precipitation data from the dataset."""
+# --- Individual Plot Functions ---
+def plot_precipitation(scenario: int, year: int, month: int) -> None:
+    """Plot precipitation values per node.
+
+    Args:
+        scenario (int): The SSP scenario identifier (e.g., "585").
+        year (int): The year to visualize.
+        month (int): The month number (1-12).
+
+    Returns:
+        None. Displays the plot.
+
+    """
     filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
@@ -30,18 +44,27 @@ def plot_precipitation(scenario: str, year: int, month: int) -> None:
         vmax=450,
     )
 
-    # --- 3. Customize ---
     plt.colorbar(label="Precipitation")
     plt.grid(True)
     plt.title("Precipitation along Data Track")
 
-    plt.show()
     # plt.savefig(f"../results/plots/precipitation_{scenario}_{year}_{month:02d}.png")
+    plt.show()
     plt.close()
 
 
-def plot_evaporation(scenario: str, year: int, month: int) -> None:
-    """Plot precipitation data from the dataset."""
+def plot_evaporation(scenario: int, year: int, month: int) -> None:
+    """Plot evaporation values per node.
+
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
+        month (int): The month number (1-12).
+
+    Returns:
+        None. Displays the plot.
+
+    """
     filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
@@ -58,20 +81,30 @@ def plot_evaporation(scenario: str, year: int, month: int) -> None:
         vmax=130,
     )
 
-    # --- 3. Customize ---
     plt.colorbar(label="Evaporation")
     plt.grid(True)
     plt.title("Evaporation along Data Track")
 
-    plt.show()
     # plt.savefig(f"../results/plots/evaporation_{scenario}_{year}_{month:02d}.png")
+    plt.show()
     plt.close()
 
 
 def plot_network(
-    scenario: str, year: int, month: int, CONNECTION_THRESHOLD=CONNECTION_THRESHOLD
+    scenario: int, year: int, month: int, CONNECTION_THRESHOLD=CONNECTION_THRESHOLD
 ) -> None:
-    """Plot a network of data tracks based on connection strengths."""
+    """Plot the strong network connections.
+
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
+        month (int): The month number (1-12).
+        CONNECTION_THRESHOLD (float): Threshold to filter strong connections.
+
+    Returns:
+        None. Displays the plot.
+
+    """
     filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
@@ -81,20 +114,15 @@ def plot_network(
 
     print(f"Loaded data, finding connections stronger than {CONNECTION_THRESHOLD}...")
 
-    # --- 1. Find all connections *above the threshold* ---
+    # --- Find all connections above the threshold ---
     i_indices, j_indices = np.where(network_np > CONNECTION_THRESHOLD)
 
-    # We no longer need the 'segments' list
     print(f"Found {len(i_indices)} connections matching the criteria.")
 
-    # --- 2. Create the Plot ---
     fig, ax = plt.subplots(figsize=(12, 9))
-
-    # --- 3. Plot the Connections (Arrows) ---
 
     if len(i_indices) > 0:
         for i, j in zip(i_indices, j_indices):
-            # A connection from i to j
             start_point = (lon_np[j], lat_np[j])
             end_point = (lon_np[i], lat_np[i])
 
@@ -102,6 +130,7 @@ def plot_network(
             if i == j:
                 continue
 
+            # Create arrows showing the direction of the connection
             ax.annotate(
                 "",
                 xy=end_point,
@@ -115,42 +144,42 @@ def plot_network(
             "Warning: No connections found above the threshold. Only points will be plotted."
         )
 
-    # --- 4. Plot the Nodes (Points) ---
+    # --- Plot Nodes on Top ---
     ax.scatter(lon_np, lat_np, c="red", s=4, zorder=10)
 
-    # --- 5. Final Plot Customization ---
     ax.set_title(f"Moisture flows (Connections > {CONNECTION_THRESHOLD})")
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
     ax.grid(True)
 
-    plt.show()
     # plt.savefig(f"../results/plots/network_{scenario}_{year}_{month:02d}.png")
+    plt.show()
     plt.close(fig)
 
 
-def plot_degrees(scenario: str, year: int, month: int) -> None:
-    """
-    Plot in-degrees and out-degrees from the dataset.
+def plot_degrees(scenario: int, year: int, month: int) -> None:
+    """Plot in-degrees and out-degrees per node.
 
-    Input:
-        Scenario (str): Number of the scenario
-        Year (int): Year number of dataset
-        Month (int): Month to look at
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
+        month (int): The month number (1-12).
 
-    Output:
-        None, but plots saved to directory
+    Returns:
+        None. Saves/displays the plot.
+
     """
     filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
+    # Create subplots for in-degrees and out-degrees
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8))
 
     fig.suptitle(
         f"Network In- and Out-Degrees - Year: {year}, Month: {month:02d}", fontsize=16
     )
 
-    # --- Plot 1: In-Degrees (on ax1) ---
+    # --- Plot 1: In-Degrees ---
     sc1 = ax1.scatter(
         x=ds["lon"],
         y=ds["lat"],
@@ -165,13 +194,12 @@ def plot_degrees(scenario: str, year: int, month: int) -> None:
     ax1.set_title("In-Degrees (Connections To)")
     ax1.set_xlabel("Longitude")
     ax1.set_ylabel("Latitude")
-    ax2.set_xlim(-81, -48)
-    ax2.set_ylim(-22, 7)
-    # ax1.grid(True)
+    ax1.set_xlim(-81, -48)
+    ax1.set_ylim(-22, 7)
     ax1.set_aspect("equal")
     fig.colorbar(sc1, ax=ax1, label="Sum of Connections", shrink=0.78)
 
-    # --- Plot 2: Out-Degrees (on ax2) ---
+    # --- Plot 2: Out-Degrees ---
     sc2 = ax2.scatter(
         x=ds["lon"],
         y=ds["lat"],
@@ -182,43 +210,41 @@ def plot_degrees(scenario: str, year: int, month: int) -> None:
         vmax=350,
         marker="s",
     )
+
     ax2.set_title("Out-Degrees (Connections From)")
     ax2.set_xlabel("Longitude")
     ax2.set_ylabel("Latitude")
     ax2.set_xlim(-81, -48)
     ax2.set_ylim(-22, 7)
-    # ax2.grid(True)
     ax2.set_aspect("equal")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
-    # plt.show()
     plt.savefig(
         f"../results/plots/InOut/Scenario{scenario}/degrees_{scenario}_{year}_{month:02d}.png"
     )
+    # plt.show()
     plt.close(fig)
 
 
-def plot_yearly_degrees(scenario: str, year: int) -> None:
-    """
-    Plot in-degrees and out-degrees from the dataset for an entire year.
+def plot_yearly_degrees(scenario: int, year: int) -> None:
+    """Plot yearly sum of in-degrees and out-degrees per node.
 
-    Input:
-        Scenario (str): Number of the scenario
-        Year (int): Year number of dataset
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
 
-    Output:
-        None, but plots saved to directory
+    Returns:
+        None. Displays the plot.
+
     """
-    filepath = "../data/scenario_ssp245_decade2030_month12.nc"
+    filepath = "../data/scenario_ssp245_decade2030_month12.nc"  # Dummy file to get lon/lat
     ds = xr.open_dataset(filepath)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8))
 
-    fig.suptitle(
-        f"Network In- and Out-Degrees - Year: {year}", fontsize=16
-    )
+    fig.suptitle(f"Network In- and Out-Degrees - Year: {year}", fontsize=16)
 
-    # --- Plot 1: In-Degrees (on ax1) ---
+    # --- Plot 1: In-Degrees ---
     sc1 = ax1.scatter(
         x=ds["lon"],
         y=ds["lat"],
@@ -233,13 +259,12 @@ def plot_yearly_degrees(scenario: str, year: int) -> None:
     ax1.set_title("In-Degrees (Connections To)")
     ax1.set_xlabel("Longitude")
     ax1.set_ylabel("Latitude")
-    ax2.set_xlim(-81, -48)
-    ax2.set_ylim(-22, 7)
-    # ax1.grid(True)
+    ax1.set_xlim(-81, -48)
+    ax1.set_ylim(-22, 7)
     ax1.set_aspect("equal")
     fig.colorbar(sc1, ax=ax1, label="Sum of Connections", shrink=0.78)
 
-    # --- Plot 2: Out-Degrees (on ax2) ---
+    # --- Plot 2: Out-Degrees ---
     sc2 = ax2.scatter(
         x=ds["lon"],
         y=ds["lat"],
@@ -250,49 +275,49 @@ def plot_yearly_degrees(scenario: str, year: int) -> None:
         vmax=1700,
         marker="s",
     )
+
     ax2.set_title("Out-Degrees (Connections From)")
     ax2.set_xlabel("Longitude")
     ax2.set_ylabel("Latitude")
     ax2.set_xlim(-81, -48)
     ax2.set_ylim(-22, 7)
-    # ax2.grid(True)
     ax2.set_aspect("equal")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
-    plt.show()
     plt.savefig(
          f"../results/plots/YearInOut/Scenario{scenario}/yearly_degrees_{scenario}_{year}.png"
      )
+    # plt.show()
     plt.close(fig)
 
 
-def plot_diff_yearly_degrees(scenario: str, year: int) -> None:
-    """
-    Plot the difference of in-degrees and out-degrees from the dataset for an entire year.
+def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
+    """Plot the difference (to 2030) in yearly sum of in-degrees and out-degrees per node.
 
-    Input:
-        Scenario (str): Number of the scenario
-        Year (int): Year number of dataset
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
 
-    Output:
-        None, but plots saved to directory
+    Returns:
+        None. Displays the plot.
+
     """
     filepath = "../data/scenario_ssp245_decade2030_month12.nc"
     ds = xr.open_dataset(filepath)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8))
 
-    fig.suptitle(
-        f"Network Difference of In- and Out-Degrees - Year: {year}", fontsize=16
-    )
-    initial_yearly_in = yearly_in_degrees(scenario, 2030)
-    initial_yearly_out = yearly_out_degrees(scenario, 2030)
+    fig.suptitle(f"Network Difference of In- and Out-Degrees - Year: {year}", fontsize=16)
 
-    # --- Plot 1: In-Degrees (on ax1) ---
+    # --- Get Baseline Values for 2030 ---
+    base_in = yearly_in_degrees(scenario, 2030)
+    base_out = yearly_out_degrees(scenario, 2030)
+
+    # --- Plot 1: In-Degrees ---
     sc1 = ax1.scatter(
         x=ds["lon"],
         y=ds["lat"],
-        c=(yearly_in_degrees(scenario, year) - initial_yearly_in),
+        c=(yearly_in_degrees(scenario, year) - base_in),
         cmap="coolwarm",
         s=300,
         vmin=-190,
@@ -303,87 +328,102 @@ def plot_diff_yearly_degrees(scenario: str, year: int) -> None:
     ax1.set_title("In-Degrees (Connections To)")
     ax1.set_xlabel("Longitude")
     ax1.set_ylabel("Latitude")
-    ax2.set_xlim(-81, -48)
-    ax2.set_ylim(-22, 7)
-    # ax1.grid(True)
+    ax1.set_xlim(-81, -48)
+    ax1.set_ylim(-22, 7)
     ax1.set_aspect("equal")
     fig.colorbar(sc1, ax=ax1, label="Sum of Connections", shrink=0.78)
 
-    # --- Plot 2: Out-Degrees (on ax2) ---
+    # --- Plot 2: Out-Degrees ---
     sc2 = ax2.scatter(
         x=ds["lon"],
         y=ds["lat"],
-        c=(yearly_out_degrees(scenario, year) - initial_yearly_out),
+        c=(yearly_out_degrees(scenario, year) - base_out),
         cmap="coolwarm",
         s=300,
         vmin=-300,
         vmax=300,
         marker="s",
     )
+
     ax2.set_title("Out-Degrees (Connections From)")
     ax2.set_xlabel("Longitude")
     ax2.set_ylabel("Latitude")
     ax2.set_xlim(-81, -48)
     ax2.set_ylim(-22, 7)
-    # ax2.grid(True)
     ax2.set_aspect("equal")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
-    plt.show()
     plt.savefig(
          f"../results/plots/YearInOut/Scenario{scenario}/yearly_diff_degrees_{scenario}_{year}.png"
     )
+    # plt.show()
     plt.close(fig)
 
 
-def plot_clustering(scenario: str, year: int, month: int) -> None:
-    """Plot local clustering coefficient from the dataset."""
+def plot_clustering(scenario: int, year: int, month: int) -> None:
+    """Plot the clustering values per node.
+
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
+        month (int): The month number (1-12).
+
+    Returns:
+        None. Displays the plot.
+
+    """
     filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
+    # Set self-connections to zero for accurate clustering calculation
     for i in range(ds.sizes["y"]):
         ds["network"].values[i][i] = 0
 
     plt.figure(figsize=(12, 8))
 
-    plt.suptitle(
-        f"Local Clustering Coefficients - Year: {year}, Month: {month:02d}", fontsize=16
-    )
-
-    sc = plt.scatter(
+    plt.scatter(
         x=ds["lon"].values,
         y=ds["lat"].values,
         c=clustering_coefficients(ds),
         cmap="viridis",
-        s=420,  # Point size
+        s=420,
         marker="s",
-        vmax=1,
         vmin=0,
+        vmax=1
     )
 
-    plt.colorbar(sc, label="Clustering Coefficient")
-
+    plt.colorbar(label="Clustering Coefficient")
     plt.grid(True)
+    plt.title(f"Local Clustering Coefficients - Year: {year}, Month: {month:02d}", fontsize=16)
 
+    plt.savefig(f"../results/plots/Clustering/Scenario{scenario}" +
+                f"/clustering_{scenario}_{year}_{month:02d}.png")
     # plt.show()
-    plt.savefig(f"../results/plots/Clustering/Scenario{scenario}/clustering_\
-                {scenario}_{year}_{month:02d}.png")
     plt.close()
 
 
-def plot_ffl(scenario: str, year: int, month: int) -> None:
-    """Plot feed forward loops from the dataset."""
+def plot_ffl(scenario: int, year: int, month: int) -> None:
+    """Plot the amount of Feed Forward Loops per node.
+
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
+        month (int): The month number (1-12).
+
+    Returns:
+        None. Displays the plot.
+
+    """
     filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
+    # Set self-connections to zero for accurate FFL calculation
     for i in range(ds.sizes["y"]):
         ds["network"].values[i][i] = 0
 
     plt.figure(figsize=(12, 8))
 
-    plt.suptitle(f"Feed Forward Loops - Year: {year}, Month: {month:02d}", fontsize=16)
-
-    sc = plt.scatter(
+    plt.scatter(
         x=ds["lon"].values,
         y=ds["lat"].values,
         c=feed_forward_loop(ds),
@@ -394,20 +434,169 @@ def plot_ffl(scenario: str, year: int, month: int) -> None:
         vmax=550
     )
 
-    plt.colorbar(sc, label="# Feed Forward Loops")
-
+    plt.colorbar(label="# of Feed Forward Loops")
     plt.grid(True)
+    plt.title(f"Feed Forward Loops - Year: {year}, Month: {month:02d}", fontsize=16)
 
-    # plt.show()
     plt.savefig(
         f"../results/plots/FFL/Scenario{scenario}/ffl_{scenario}_{year}_{month:02d}.png"
     )
+    # plt.show()
     plt.close()
 
 
+# --- Generalized Diff Plot Function ---
+def _plot_scenario_diffs(metric_configs, title, output_filename) -> None:
+    """Define a generalized function to plot yearly differences in % for all scenarios.
+
+    Args:
+        metric_configs (list of dict): Configuration for what to plot.
+                Format: [{'prefix': 'indegrees', 'linestyle': '-', 'label': 'In-Degrees'}, ...]
+        title (str): Plot title.
+        output_filename (str): Output filename.
+
+    Returns:
+        None. Saves and displays the plot.
+
+    """
+    scenarios = ["245", "370", "585"]
+    years_to_scan = range(2030, 2100, 1)
+    colors = ["#ff9900", "#ff0000", "#8400ff"]
+
+    results_path = Path("../results/cache")
+
+    fig, ax = plt.subplots(figsize=(10, 6), dpi=150)
+
+    for idx, scenario in enumerate(scenarios):
+        scenario_color = colors[idx]
+
+        # --- Loop over each metric configuration ---
+        for config in metric_configs:
+            prefix = config['prefix']
+            line_style = config.get('linestyle', '-')
+            label_prefix = config.get('label', prefix.capitalize())
+
+            # --- Load Year 2030 as Baseline for Comparison ---
+            base_file = results_path / f"{prefix}_{scenario}_2030.nc"
+
+            if not base_file.exists():
+                print(f"Skipping {prefix} for Scenario {scenario}: Baseline (2030) not found.")
+                continue
+
+            with xr.open_dataarray(base_file) as da_base:
+                base_values = da_base.values
+
+            # --- Collect Data for years ---
+            plot_years = []
+            diff_values = []
+
+            for year in years_to_scan:
+                file_path = results_path / f"{prefix}_{scenario}_{year}.nc"
+
+                if file_path.exists():
+                    with xr.open_dataarray(file_path) as da_curr:
+                        curr_values = da_curr.values
+
+                    # Calculate Difference in %
+                    diff = np.nanmean(curr_values - base_values)
+                    diff_perc = (diff / np.nanmean(base_values)) * 100
+
+                    plot_years.append(year)
+                    diff_values.append(diff_perc)
+
+            # --- Plot the data for this metric and scenario ---
+            if plot_years:
+                ax.plot(plot_years, diff_values,
+                        label=f"{label_prefix} Scenario {scenario}",
+                        color=scenario_color,
+                        linestyle=line_style,
+                        alpha=0.9)
+
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    ax.set_xlabel("Year", fontsize=12)
+    ax.set_ylabel("Average Difference per Node [%]", fontsize=12)
+
+    ax.axhline(0, color='black', linewidth=1, linestyle='-', alpha=0.3)
+    ax.grid(True, which='major', linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
+    ax.set_axisbelow(True)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    ax.legend(loc='best', frameon=True, fontsize=10)
+    plt.tight_layout()
+
+    plt.savefig(output_filename)
+    print(f"Plot saved to {output_filename}")
+    plt.show()
+    plt.close(fig)
+
+
+# --- Individual Difference Plot Functions ---
+def plot_all_yearly_diff_degrees() -> None:
+    """Plot course of yearly differences in in-degrees and out-degrees in %.
+
+    Args:
+        None.
+
+    Returns:
+        None. Displays the plot.
+
+    """
+    configs = [
+        {'prefix': 'indegrees',  'linestyle': '-',  'label': 'In-Degrees'},
+        {'prefix': 'outdegrees', 'linestyle': '--', 'label': 'Out-Degrees'}
+    ]
+    _plot_scenario_diffs(
+        metric_configs=configs,
+        title="Network Degree Differences: (2030-2100)",
+        output_filename="../results/YearlySummedDiffDegrees_all_scenarios.png"
+    )
+
+
+def plot_all_yearly_diff_clustering() -> None:
+    """Plot course of yearly differences in clustering in %.
+
+    Args:
+        None.
+
+    Returns:
+        None. Displays the plot.
+
+    """
+    configs = [
+        {'prefix': 'clustering', 'linestyle': '-', 'label': 'Clustering Diff'}
+    ]
+    _plot_scenario_diffs(
+        metric_configs=configs,
+        title="Clustering Differences: (2030-2100)",
+        output_filename="../results/YearlyDiffClustering_all_scenarios.png"
+    )
+
+
+def plot_all_yearly_diff_ffl() -> None:
+    """Plot course of yearly differences in feed-forward loops in %.
+
+    Args:
+        None.
+
+    Returns:
+        None. Displays the plot.
+
+    """
+    configs = [
+        {'prefix': 'ffl', 'linestyle': '-', 'label': 'FFL Diff'}
+    ]
+    _plot_scenario_diffs(
+        metric_configs=configs,
+        title="Feed Forward Loop Differences: (2030-2100)",
+        output_filename="../results/YearlyDiffFFL_all_scenarios.png"
+    )
+
+
 if __name__ == "__main__":
-    scenario = "370"
-    year = 2095
+    scenario = 245
+    year = 2035
     month = 1
 
     # plot_precipitation(scenario=scenario, year=year, month=month)
@@ -415,5 +604,9 @@ if __name__ == "__main__":
     # plot_network(scenario=scenario, year=year, month=month)
     # plot_degrees(scenario=scenario, year=year, month=month)
     # plot_clustering(scenario=scenario, year=year, month=month)
-    plot_yearly_degrees(scenario=scenario, year=year)
-    plot_diff_yearly_degrees(scenario=scenario, year=year)
+    # plot_yearly_degrees(scenario=scenario, year=year)
+    # plot_diff_yearly_degrees(scenario=scenario, year=year)
+    # plot_yearly_summed_diff_degrees(scenario=scenario)
+    # plot_all_yearly_diff_degrees()
+    # plot_all_yearly_diff_clustering()
+    # plot_all_yearly_diff_ffl()

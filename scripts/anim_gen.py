@@ -7,8 +7,20 @@ import subprocess
 import plot_all as pa
 
 
-def anim_gen(scenario, flag, fps=30, delete_after=False):
-    """Create an animation of for different plotting functions."""
+def anim_gen(scenario: int, flag: str, fps: int = 30, delete_after: bool = False) -> None:
+    """Create an animation of for different plotting functions.
+
+    Args:
+        scenario (int): Scenario identifier.
+        flag (str): Type of plot to generate animation for.
+        fps (int): Frames per second for the output video.
+        delete_after (bool): Whether to delete individual frames after video creation.
+
+    Returns:
+        None, but saves an mp4 video file.
+
+    """
+    # --- Configuration based on flag ---
     PLOT_DIR = None
     plot_function = None
     plot_name = None
@@ -54,13 +66,13 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
     if not os.path.exists(PLOT_DIR):
         os.makedirs(PLOT_DIR)
 
-    # --- 2. Frame Generation and Collection Logic ---
+    # --- Logic for monthly plots ---
     if plot_function != pa.plot_yearly_degrees and plot_function != pa.plot_diff_yearly_degrees:
-        # Logic for monthly plots
         for year in years:
             for month in months:
                 file_path = os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png")
 
+                # Check if plot already exists
                 if os.path.exists(file_path):
                     print(f"  ... plot for {year}-{month:02d} already exists. Skipping.")
                     frame_files.append(file_path)
@@ -74,8 +86,8 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
                         print(f"❌ ERROR: Plotting failed for {year}-{month:02d}. Error: {e}")
                         continue
 
+    # --- Logic for yearly plots ---
     else:
-        # Logic for yearly plots
         for year in years:
             file_path = os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}.png")
 
@@ -94,12 +106,14 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
 
     print(f"\nCollected {len(frame_files)} frame files.")
 
-    # --- 3. Sorting ---
+    # --- Sort by Years only ---
     if plot_function == pa.plot_yearly_degrees or plot_function == pa.plot_diff_yearly_degrees:
         frame_list = sorted(
             frame_files,
             key=lambda x: re.search(r"_(\d{4})\.png$", x).group(1),
         )
+
+    # --- Sort by Years and Months ---
     else:
         frame_list = sorted(
             frame_files,
@@ -111,10 +125,9 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
 
     print(f"Found {len(frame_list)} images.")
 
-    # --- 4. Temporary Directory Cleanup and Symlink Creation ---
+    # --- Temporary Directory Cleanup and Symlink Creation ---
     tmp_dir = f"./tmp_frames_{scenario}"
 
-    # 🌟 FIX for FileExistsError: Clean up stale temporary directory
     if os.path.exists(tmp_dir):
         print(f"🗑️  Cleaning up stale temporary directory: {tmp_dir}")
         shutil.rmtree(tmp_dir)
@@ -124,13 +137,12 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
     for i, f in enumerate(frame_list):
         link_name = os.path.join(tmp_dir, f"frame_{i:05d}.png")
 
-        # 🌟 FIX for CalledProcessError: Use relative paths for symlinks
-        source_file_rel = os.path.relpath(f, start=tmp_dir)
+        source_file_abs = os.path.abspath(f)
 
         if not os.path.exists(link_name):
-            os.symlink(source_file_rel, link_name)
+            os.symlink(source_file_abs, link_name)
 
-    # --- 5. FFmpeg Execution ---
+    # --- Create the Movie using ffmpeg ---
     out_dir = os.path.dirname(out_path)
     if out_dir and not os.path.exists(out_dir):
         os.makedirs(out_dir)
@@ -138,23 +150,19 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
     cmd = [
         "ffmpeg",
         "-y",
-        "-framerate",
-        str(fps),
-        "-i",
-        f"{tmp_dir}/frame_%05d.png",
-        "-loglevel",
-        "error",
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
+        "-framerate", str(fps),
+        "-start_number", "0",
+        "-i", f"{tmp_dir}/frame_%05d.png",
+        "-loglevel", "error",
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
         out_path,
     ]
 
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, check=True)
 
-    # --- 6. Finalization and Cleanup ---
+    # --- Finalization and Cleanup ---
     if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
         print(f"✅ Movie saved to {out_path}")
         if delete_after:
@@ -164,12 +172,11 @@ def anim_gen(scenario, flag, fps=30, delete_after=False):
     else:
         print("❌ Movie creation failed.")
 
-    # Always clean up the temporary links after use
     shutil.rmtree(tmp_dir)
 
 
 if __name__ == "__main__":
-    scenario = "370"
-    anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
-    # anim_gen(scenario, "Clustering")
+    scenario = 585
+    # anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
+    anim_gen(scenario, "Clustering", delete_after=False)
     # anim_gen(scenario, "FFL")
