@@ -1,4 +1,5 @@
 """Script to plot a network of data tracks based on connection strengths."""
+
 from io_utils import compute_and_cache
 
 import numpy as np

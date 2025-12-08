@@ -1,4 +1,5 @@
 """Script to plot various network metrics and their differences over time."""
+
 from pathlib import Path
 
 from clustering import clustering_coefficients, feed_forward_loop
@@ -237,7 +238,9 @@ def plot_yearly_degrees(scenario: int, year: int) -> None:
         None. Displays the plot.
 
     """
-    filepath = "../data/scenario_ssp245_decade2030_month12.nc"  # Dummy file to get lon/lat
+    filepath = (
+        "../data/scenario_ssp245_decade2030_month12.nc"  # Dummy file to get lon/lat
+    )
     ds = xr.open_dataset(filepath)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8))
@@ -285,8 +288,8 @@ def plot_yearly_degrees(scenario: int, year: int) -> None:
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
     plt.savefig(
-         f"../results/plots/YearInOut/Scenario{scenario}/yearly_degrees_{scenario}_{year}.png"
-     )
+        f"../results/plots/YearInOut/Scenario{scenario}/yearly_degrees_{scenario}_{year}.png"
+    )
     # plt.show()
     plt.close(fig)
 
@@ -307,7 +310,9 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8))
 
-    fig.suptitle(f"Network Difference of In- and Out-Degrees - Year: {year}", fontsize=16)
+    fig.suptitle(
+        f"Network Difference of In- and Out-Degrees - Year: {year}", fontsize=16
+    )
 
     # --- Get Baseline Values for 2030 ---
     base_in = yearly_in_degrees(scenario, 2030)
@@ -354,7 +359,7 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
     plt.savefig(
-         f"../results/plots/YearInOut/Scenario{scenario}/yearly_diff_degrees_{scenario}_{year}.png"
+        f"../results/plots/YearInOut/Scenario{scenario}/yearly_diff_degrees_{scenario}_{year}.png"
     )
     # plt.show()
     plt.close(fig)
@@ -389,15 +394,19 @@ def plot_clustering(scenario: int, year: int, month: int) -> None:
         s=420,
         marker="s",
         vmin=0,
-        vmax=1
+        vmax=1,
     )
 
     plt.colorbar(label="Clustering Coefficient")
     plt.grid(True)
-    plt.title(f"Local Clustering Coefficients - Year: {year}, Month: {month:02d}", fontsize=16)
+    plt.title(
+        f"Local Clustering Coefficients - Year: {year}, Month: {month:02d}", fontsize=16
+    )
 
-    plt.savefig(f"../results/plots/Clustering/Scenario{scenario}" +
-                f"/clustering_{scenario}_{year}_{month:02d}.png")
+    plt.savefig(
+        f"../results/plots/Clustering/Scenario{scenario}"
+        + f"/clustering_{scenario}_{year}_{month:02d}.png"
+    )
     # plt.show()
     plt.close()
 
@@ -431,7 +440,7 @@ def plot_ffl(scenario: int, year: int, month: int) -> None:
         s=420,  # Point size
         marker="s",
         vmin=0,
-        vmax=550
+        vmax=550,
     )
 
     plt.colorbar(label="# of Feed Forward Loops")
@@ -472,15 +481,17 @@ def _plot_scenario_diffs(metric_configs, title, output_filename) -> None:
 
         # --- Loop over each metric configuration ---
         for config in metric_configs:
-            prefix = config['prefix']
-            line_style = config.get('linestyle', '-')
-            label_prefix = config.get('label', prefix.capitalize())
+            prefix = config["prefix"]
+            line_style = config.get("linestyle", "-")
+            label_prefix = config.get("label", prefix.capitalize())
 
             # --- Load Year 2030 as Baseline for Comparison ---
             base_file = results_path / f"{prefix}_{scenario}_2030.nc"
 
             if not base_file.exists():
-                print(f"Skipping {prefix} for Scenario {scenario}: Baseline (2030) not found.")
+                print(
+                    f"Skipping {prefix} for Scenario {scenario}: Baseline (2030) not found."
+                )
                 continue
 
             with xr.open_dataarray(base_file) as da_base:
@@ -506,24 +517,27 @@ def _plot_scenario_diffs(metric_configs, title, output_filename) -> None:
 
             # --- Plot the data for this metric and scenario ---
             if plot_years:
-                ax.plot(plot_years, diff_values,
-                        label=f"{label_prefix} Scenario {scenario}",
-                        color=scenario_color,
-                        linestyle=line_style,
-                        alpha=0.9)
+                ax.plot(
+                    plot_years,
+                    diff_values,
+                    label=f"{label_prefix} Scenario {scenario}",
+                    color=scenario_color,
+                    linestyle=line_style,
+                    alpha=0.9,
+                )
 
-    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
     ax.set_xlabel("Year", fontsize=12)
     ax.set_ylabel("Average Difference per Node [%]", fontsize=12)
 
-    ax.axhline(0, color='black', linewidth=1, linestyle='-', alpha=0.3)
-    ax.grid(True, which='major', linestyle='--', linewidth=0.5, color='gray', alpha=0.5)
+    ax.axhline(0, color="black", linewidth=1, linestyle="-", alpha=0.3)
+    ax.grid(True, which="major", linestyle="--", linewidth=0.5, color="gray", alpha=0.5)
     ax.set_axisbelow(True)
 
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
 
-    ax.legend(loc='best', frameon=True, fontsize=10)
+    ax.legend(loc="best", frameon=True, fontsize=10)
     plt.tight_layout()
 
     plt.savefig(output_filename)
@@ -544,13 +558,13 @@ def plot_all_yearly_diff_degrees() -> None:
 
     """
     configs = [
-        {'prefix': 'indegrees',  'linestyle': '-',  'label': 'In-Degrees'},
-        {'prefix': 'outdegrees', 'linestyle': '--', 'label': 'Out-Degrees'}
+        {"prefix": "indegrees", "linestyle": "-", "label": "In-Degrees"},
+        {"prefix": "outdegrees", "linestyle": "--", "label": "Out-Degrees"},
     ]
     _plot_scenario_diffs(
         metric_configs=configs,
         title="Network Degree Differences: (2030-2100)",
-        output_filename="../results/YearlySummedDiffDegrees_all_scenarios.png"
+        output_filename="../results/YearlySummedDiffDegrees_all_scenarios.png",
     )
 
 
@@ -564,13 +578,11 @@ def plot_all_yearly_diff_clustering() -> None:
         None. Displays the plot.
 
     """
-    configs = [
-        {'prefix': 'clustering', 'linestyle': '-', 'label': 'Clustering Diff'}
-    ]
+    configs = [{"prefix": "clustering", "linestyle": "-", "label": "Clustering Diff"}]
     _plot_scenario_diffs(
         metric_configs=configs,
         title="Clustering Differences: (2030-2100)",
-        output_filename="../results/YearlyDiffClustering_all_scenarios.png"
+        output_filename="../results/YearlyDiffClustering_all_scenarios.png",
     )
 
 
@@ -584,13 +596,11 @@ def plot_all_yearly_diff_ffl() -> None:
         None. Displays the plot.
 
     """
-    configs = [
-        {'prefix': 'ffl', 'linestyle': '-', 'label': 'FFL Diff'}
-    ]
+    configs = [{"prefix": "ffl", "linestyle": "-", "label": "FFL Diff"}]
     _plot_scenario_diffs(
         metric_configs=configs,
         title="Feed Forward Loop Differences: (2030-2100)",
-        output_filename="../results/YearlyDiffFFL_all_scenarios.png"
+        output_filename="../results/YearlyDiffFFL_all_scenarios.png",
     )
 
 

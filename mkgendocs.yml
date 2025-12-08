@@ -1,11 +1,15 @@
-site_name: My Super Cool Respository
-
+site_name: EarthSystem
 
 # Repository
-repo_name: My Super Cool Respository
-repo: https://github.com/allfed/My-Super-Cool-Respository
+repo_name: EarthSystem
+repo: https://github.com/Jakopf4/EarthSystem
 # Copyright
-copyright: ALLFED
+copyright: Jakopf4
 
-#This specifies the autogeneration portion
+# This specifies the autogeneration portion
+# IMPORTANT: You must list your python files here for docs to generate.
+# If you have a file "src/climate.py", list it below.
+# If you have no code yet, leave 'pages' empty but ensure the structure exists.
 pages:
+  - page: "index.md"
+    source: "README.md"

@@ -1,4 +1,5 @@
 """File to understand the structure of the dataset using xarray."""
+
 import xarray as xr
 
 # Filepath to the dataset

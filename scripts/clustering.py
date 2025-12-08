@@ -18,7 +18,9 @@ Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
 
 # --- Core Calculations ---
-def find_neighbourhood(ds: xr.Dataset, barrier: float = CONNECTION_THRESHOLD) -> np.ndarray:
+def find_neighbourhood(
+    ds: xr.Dataset, barrier: float = CONNECTION_THRESHOLD
+) -> np.ndarray:
     """Find neighbourhood of all points.
 
     Args:
@@ -33,7 +35,9 @@ def find_neighbourhood(ds: xr.Dataset, barrier: float = CONNECTION_THRESHOLD) ->
     return adj_matrix
 
 
-def actual_connections(ds: xr.Dataset, barrier: float = CONNECTION_THRESHOLD) -> np.ndarray:
+def actual_connections(
+    ds: xr.Dataset, barrier: float = CONNECTION_THRESHOLD
+) -> np.ndarray:
     """Calculate the actual connections inside a directed neighbourhood.
 
     Args:

@@ -1,9 +1,8 @@
 site_name: EarthSystem
 
-
 # Repository
 repo_name: EarthSystem
-repo_url:https://github.com/Jakopf4/EarthSystem.git
+repo_url: https://github.com/Jakopf4/EarthSystem
 edit_uri: ""
 # Copyright
 copyright: Jakopf4
@@ -15,7 +14,6 @@ plugins:
 
 theme:
   name: 'readthedocs'
-  custom_dir: 'docs'
   palette:
     primary: 'white'
   logo: ''
@@ -24,5 +22,6 @@ theme:
     - navigation.tabs
     - navigation.tabs.sticky
     - instant
-nav:
 
+nav:
+  - Home: index.md

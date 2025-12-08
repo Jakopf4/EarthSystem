@@ -198,7 +198,7 @@ def indent(string: str) -> int:
 def main():
     """Execute when running this script."""
     # This is the path the script will look for code to document
-    python_tips_dir = Path.cwd().joinpath("src")
+    python_tips_dir = Path.cwd().joinpath("scripts")
     # This is the path the script will look for mkgendocs.yml
     root_dir = Path.cwd()
 

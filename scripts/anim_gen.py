@@ -1,4 +1,5 @@
 """Script to create an animation for different plotting functions."""
+
 import os
 import re
 import shutil
@@ -7,7 +8,9 @@ import subprocess
 import plot_all as pa
 
 
-def anim_gen(scenario: int, flag: str, fps: int = 30, delete_after: bool = False) -> None:
+def anim_gen(
+    scenario: int, flag: str, fps: int = 30, delete_after: bool = False
+) -> None:
     """Create an animation of for different plotting functions.
 
     Args:
@@ -67,14 +70,21 @@ def anim_gen(scenario: int, flag: str, fps: int = 30, delete_after: bool = False
         os.makedirs(PLOT_DIR)
 
     # --- Logic for monthly plots ---
-    if plot_function != pa.plot_yearly_degrees and plot_function != pa.plot_diff_yearly_degrees:
+    if (
+        plot_function != pa.plot_yearly_degrees
+        and plot_function != pa.plot_diff_yearly_degrees
+    ):
         for year in years:
             for month in months:
-                file_path = os.path.join(PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png")
+                file_path = os.path.join(
+                    PLOT_DIR, f"{plot_name}_{scenario}_{year}_{month:02d}.png"
+                )
 
                 # Check if plot already exists
                 if os.path.exists(file_path):
-                    print(f"  ... plot for {year}-{month:02d} already exists. Skipping.")
+                    print(
+                        f"  ... plot for {year}-{month:02d} already exists. Skipping."
+                    )
                     frame_files.append(file_path)
                     continue
                 else:
@@ -83,7 +93,9 @@ def anim_gen(scenario: int, flag: str, fps: int = 30, delete_after: bool = False
                         print(f"  ... saved frame for {year}-{month:02d}")
                         frame_files.append(file_path)
                     except Exception as e:
-                        print(f"❌ ERROR: Plotting failed for {year}-{month:02d}. Error: {e}")
+                        print(
+                            f"❌ ERROR: Plotting failed for {year}-{month:02d}. Error: {e}"
+                        )
                         continue
 
     # --- Logic for yearly plots ---
@@ -107,7 +119,10 @@ def anim_gen(scenario: int, flag: str, fps: int = 30, delete_after: bool = False
     print(f"\nCollected {len(frame_files)} frame files.")
 
     # --- Sort by Years only ---
-    if plot_function == pa.plot_yearly_degrees or plot_function == pa.plot_diff_yearly_degrees:
+    if (
+        plot_function == pa.plot_yearly_degrees
+        or plot_function == pa.plot_diff_yearly_degrees
+    ):
         frame_list = sorted(
             frame_files,
             key=lambda x: re.search(r"_(\d{4})\.png$", x).group(1),
@@ -150,12 +165,18 @@ def anim_gen(scenario: int, flag: str, fps: int = 30, delete_after: bool = False
     cmd = [
         "ffmpeg",
         "-y",
-        "-framerate", str(fps),
-        "-start_number", "0",
-        "-i", f"{tmp_dir}/frame_%05d.png",
-        "-loglevel", "error",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
+        "-framerate",
+        str(fps),
+        "-start_number",
+        "0",
+        "-i",
+        f"{tmp_dir}/frame_%05d.png",
+        "-loglevel",
+        "error",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
         out_path,
     ]
 
