@@ -9,4 +9,4 @@ copyright: Jakopf4
 # This specifies the autogeneration portion
 pages:
   - page: "index.md"
-    source: "scripts/checK_data.py"
+    source: "scripts/check_data.py"
