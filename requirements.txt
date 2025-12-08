@@ -1,11 +1,6 @@
 pandas>=1.4.3
-setuptools>=61.2.0
-pytest>=7.1.2
 numpy>=1.23.1
 matplotlib>=3.5.1
-mkdocs
 # ADD THESE to fix the Lint workflow failure:
 black
 flake8
-# ADD THIS if your docs automation uses it (common in this template):
-mkdocs-gen-files
