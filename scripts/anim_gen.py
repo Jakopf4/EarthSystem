@@ -59,11 +59,19 @@ def anim_gen(
         plot_name = "ffl"
         out_path = f"../results/Scenario_{scenario}_FFL.mp4"
 
+    elif flag == "Deforestation":
+        PLOT_DIR = f"../results/plots/Deforestation"
+        plot_function = pa.plot_deforestation
+        plot_name = "deforestation"
+        out_path = f"../results/Deforestation.mp4"
+
     if PLOT_DIR is None:
         exit(1)
 
     frame_files = []
     years = range(2030, 2100, 1)
+    if flag == "Deforestation":
+        years = range(2002, 2051, 1)
     months = range(1, 13, 1)
 
     if not os.path.exists(PLOT_DIR):
@@ -73,6 +81,7 @@ def anim_gen(
     if (
         plot_function != pa.plot_yearly_degrees
         and plot_function != pa.plot_diff_yearly_degrees
+        and plot_function != pa.plot_deforestation
     ):
         for year in years:
             for month in months:
@@ -98,6 +107,24 @@ def anim_gen(
                         )
                         continue
 
+    # --- Logic for yearly deforestation plots ---
+    elif plot_function == pa.plot_deforestation:
+        for year in years:
+            file_path = os.path.join(PLOT_DIR, f"{plot_name}_{year}.png")
+
+            if os.path.exists(file_path):
+                print(f"  ... plot for {year} already exists. Skipping.")
+                frame_files.append(file_path)
+                continue
+            else:
+                try:
+                    plot_function(year)
+                    print(f"  ... saved frame for {year}")
+                    frame_files.append(file_path)
+                except Exception as e:
+                    print(f"❌ ERROR: Plotting failed for {year}. Error: {e}")
+                    continue
+
     # --- Logic for yearly plots ---
     else:
         for year in years:
@@ -118,10 +145,12 @@ def anim_gen(
 
     print(f"\nCollected {len(frame_files)} frame files.")
 
+
     # --- Sort by Years only ---
     if (
         plot_function == pa.plot_yearly_degrees
         or plot_function == pa.plot_diff_yearly_degrees
+        or plot_function == pa.plot_deforestation
     ):
         frame_list = sorted(
             frame_files,
@@ -199,5 +228,5 @@ def anim_gen(
 if __name__ == "__main__":
     scenario = 585
     # anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
-    anim_gen(scenario, "Clustering", delete_after=False)
+    anim_gen(scenario, "Deforestation", delete_after=False)
     # anim_gen(scenario, "FFL")

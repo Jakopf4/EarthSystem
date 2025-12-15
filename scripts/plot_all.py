@@ -604,6 +604,43 @@ def plot_all_yearly_diff_ffl() -> None:
     )
 
 
+def plot_deforestation(year: int) -> None:
+    """Plot deforestation per year per node.
+
+    Args:
+        
+    Returns:
+        None. Displays the plot.
+
+    """
+    data_plot = np.genfromtxt(f"../data/deforestation/deforestation_all_BaU_{year}.txt")
+
+    long = data_plot[:, 0]
+    lat = data_plot[:, 1]
+    deforest = 100*data_plot[:, 2]
+
+    plt.figure(figsize=(12, 8))
+
+    plt.scatter(
+        x=long,
+        y=lat,
+        c=deforest,
+        cmap="viridis",
+        s=420,
+        marker="s",
+        vmin=0,
+        vmax=100,
+    )
+
+    plt.colorbar(label="Deforestation")
+    plt.grid(True)
+    plt.title("Deforestation")
+
+    plt.savefig(f"../results/plots/Deforestation/deforestation_{year}.png")
+    #plt.show()
+    plt.close()
+
+
 if __name__ == "__main__":
     scenario = 245
     year = 2035
@@ -620,3 +657,4 @@ if __name__ == "__main__":
     # plot_all_yearly_diff_degrees()
     # plot_all_yearly_diff_clustering()
     # plot_all_yearly_diff_ffl()
+    # plot_deforestation(year=2002)
