@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 
 # Directory Configuration
-DATA_DIR = "../data"
+DATA_DIR = "../data/water"
 OUTPUT_DIR = "../results/cache"
 Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 

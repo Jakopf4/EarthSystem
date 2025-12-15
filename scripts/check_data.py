@@ -3,7 +3,7 @@
 import xarray as xr
 
 # Filepath to the dataset
-filepath = "../data/scenario_ssp245_decade2030_month01.nc"
+filepath = "../data/water/scenario_ssp245_decade2030_month01.nc"
 
 ds = xr.open_dataset(filepath)
 

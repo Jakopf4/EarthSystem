@@ -29,7 +29,7 @@ def plot_precipitation(scenario: int, year: int, month: int) -> None:
         None. Displays the plot.
 
     """
-    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
     plt.figure(figsize=(12, 8))
@@ -66,7 +66,7 @@ def plot_evaporation(scenario: int, year: int, month: int) -> None:
         None. Displays the plot.
 
     """
-    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
     plt.figure(figsize=(12, 8))
@@ -106,7 +106,7 @@ def plot_network(
         None. Displays the plot.
 
     """
-    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
     lon_np = ds["lon"].values
@@ -170,7 +170,7 @@ def plot_degrees(scenario: int, year: int, month: int) -> None:
         None. Saves/displays the plot.
 
     """
-    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
     # Create subplots for in-degrees and out-degrees
@@ -239,7 +239,7 @@ def plot_yearly_degrees(scenario: int, year: int) -> None:
 
     """
     filepath = (
-        "../data/scenario_ssp245_decade2030_month12.nc"  # Dummy file to get lon/lat
+        "../data/water/scenario_ssp245_decade2030_month12.nc"  # Dummy file to get lon/lat
     )
     ds = xr.open_dataset(filepath)
 
@@ -305,7 +305,7 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
         None. Displays the plot.
 
     """
-    filepath = "../data/scenario_ssp245_decade2030_month12.nc"
+    filepath = "../data/water/scenario_ssp245_decade2030_month12.nc"
     ds = xr.open_dataset(filepath)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8))
@@ -377,7 +377,7 @@ def plot_clustering(scenario: int, year: int, month: int) -> None:
         None. Displays the plot.
 
     """
-    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
     # Set self-connections to zero for accurate clustering calculation
@@ -423,7 +423,7 @@ def plot_ffl(scenario: int, year: int, month: int) -> None:
         None. Displays the plot.
 
     """
-    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
     # Set self-connections to zero for accurate FFL calculation

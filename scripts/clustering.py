@@ -10,7 +10,7 @@ import xarray as xr
 
 # --- Configuration ---
 CONNECTION_THRESHOLD = 1.14
-DATA_DIR = "../data"
+DATA_DIR = "../data/water"
 OUTPUT_DIR = "../results/cache"
 
 # Ensure output directory exists
