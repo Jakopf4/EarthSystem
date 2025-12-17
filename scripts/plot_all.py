@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from clustering import clustering_coefficients, feed_forward_loop
-
 from inout import in_degrees, out_degrees, yearly_in_degrees, yearly_out_degrees
 
 import matplotlib.pyplot as plt
@@ -13,7 +12,98 @@ import numpy as np
 import xarray as xr
 
 
+CARTOPY_AVAILABLE = False
+try:
+    import cartopy.crs as ccrs
+    import cartopy.feature as cfeature
+    CARTOPY_AVAILABLE = True
+except ImportError:
+    print("Warning: 'cartopy' module not found.")
+    print("To see coastlines and borders, install it via: 'pip install cartopy'")
+    print("Falling back to standard plotting mode...\n")
+
+
 CONNECTION_THRESHOLD = 1.14  # Threshold for strong connections
+
+
+# --- Amazon Map Setup Functions ---
+def setup_amazon_map(fig_size=(12, 8)):
+    """Create an Amazon map with coastlines and borders.
+
+    Args:
+        fig_size (tuple): Size of the figure.
+
+    Returns:
+        tuple: (fig, ax1, ax2, kwargs) - The figure, the two axes, and the transform kwargs.
+
+    """
+    fig = plt.figure(figsize=fig_size)
+
+    if CARTOPY_AVAILABLE:
+        ax = plt.axes(projection=ccrs.PlateCarree())
+
+        ax.set_extent([-81, -48, -22.5, 7.5], crs=ccrs.PlateCarree())
+
+        COASTLINES = cfeature.NaturalEarthFeature(
+            'physical', 'coastline', '50m', edgecolor='black', facecolor='none'
+        )
+        BORDERS = cfeature.NaturalEarthFeature(
+            'cultural', 'admin_0_countries', '50m', edgecolor='black', facecolor='none'
+        )
+
+        ax.add_feature(COASTLINES, linewidth=1)
+        ax.add_feature(BORDERS, linestyle='-', linewidth=0.5)
+
+        kwargs = {'transform': ccrs.PlateCarree()}
+
+        return fig, ax, kwargs
+
+    else:
+        print("Cartopy not available. Returning standard axes.")
+        ax = plt.axes()
+        kwargs = {}
+        return fig, ax, kwargs
+
+
+def setup_double_amazon_map(fig_size=(22, 8)):
+    """Create an Amazon map with two subplots side by side.
+
+    Args:
+        fig_size (tuple): Size of the figure.
+
+    Returns:
+        tuple: (fig, ax1, ax2, kwargs) - The figure, the two axes, and the transform kwargs.
+
+    """
+    if CARTOPY_AVAILABLE:
+        projection = ccrs.PlateCarree()
+        kwargs = {'transform': projection}
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=fig_size,
+                                       subplot_kw={'projection': projection})
+
+        COASTLINES = cfeature.NaturalEarthFeature(
+            'physical', 'coastline', '50m', edgecolor='black', facecolor='none'
+        )
+        BORDERS = cfeature.NaturalEarthFeature(
+            'cultural', 'admin_0_countries', '50m', edgecolor='black', facecolor='none'
+        )
+
+        ax1.set_extent([-81, -48, -22.5, 7.5], crs=projection)
+        ax1.add_feature(COASTLINES, linewidth=1)
+        ax1.add_feature(BORDERS, linestyle='-', linewidth=0.5)
+
+        ax2.set_extent([-81, -48, -22.5, 7.5], crs=projection)
+        ax2.add_feature(COASTLINES, linewidth=1)
+        ax2.add_feature(BORDERS, linestyle='-', linewidth=0.5)
+
+        return fig, ax1, ax2, kwargs
+
+    else:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=fig_size)
+        print("Cartopy not available. Returning standard axes.")
+        kwargs = {}
+        return fig, ax1, ax2, kwargs
 
 
 # --- Individual Plot Functions ---
@@ -29,12 +119,12 @@ def plot_precipitation(scenario: int, year: int, month: int) -> None:
         None. Displays the plot.
 
     """
-    filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
-    plt.figure(figsize=(12, 8))
+    fig, ax, kwargs = setup_amazon_map(fig_size=(12, 8))
 
-    plt.scatter(
+    sc = ax.scatter(
         x=ds["lon"],
         y=ds["lat"],
         c=ds["prec"],
@@ -43,15 +133,15 @@ def plot_precipitation(scenario: int, year: int, month: int) -> None:
         marker="s",
         vmin=0,
         vmax=450,
+        **kwargs
     )
 
-    plt.colorbar(label="Precipitation")
-    plt.grid(True)
-    plt.title("Precipitation along Data Track")
+    plt.colorbar(sc, ax=ax, label="Precipitation")
+    plt.title(f"Precipitation - SSP {scenario}, Year: {year}, Month: {month:02d}", fontsize=16)
 
     # plt.savefig(f"../results/plots/precipitation_{scenario}_{year}_{month:02d}.png")
     plt.show()
-    plt.close()
+    plt.close(fig)
 
 
 def plot_evaporation(scenario: int, year: int, month: int) -> None:
@@ -66,12 +156,12 @@ def plot_evaporation(scenario: int, year: int, month: int) -> None:
         None. Displays the plot.
 
     """
-    filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+    filepath = f"../data/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
-    plt.figure(figsize=(12, 8))
+    fig, ax, kwargs = setup_amazon_map(fig_size=(12, 8))
 
-    plt.scatter(
+    sc = ax.scatter(
         x=ds["lon"],
         y=ds["lat"],
         c=ds["evap"],
@@ -80,15 +170,15 @@ def plot_evaporation(scenario: int, year: int, month: int) -> None:
         marker="s",
         vmin=0,
         vmax=130,
+        **kwargs
     )
 
-    plt.colorbar(label="Evaporation")
-    plt.grid(True)
-    plt.title("Evaporation along Data Track")
+    plt.colorbar(sc, ax=ax, label="Evaporation")
+    plt.title(f"Evaporation - SSP {scenario}, Year: {year}, Month: {month:02d}", fontsize=16)
 
     # plt.savefig(f"../results/plots/evaporation_{scenario}_{year}_{month:02d}.png")
     plt.show()
-    plt.close()
+    plt.close(fig)
 
 
 def plot_network(
@@ -120,7 +210,7 @@ def plot_network(
 
     print(f"Found {len(i_indices)} connections matching the criteria.")
 
-    fig, ax = plt.subplots(figsize=(12, 9))
+    fig, ax, kwargs = setup_amazon_map(fig_size=(8, 8))
 
     if len(i_indices) > 0:
         for i, j in zip(i_indices, j_indices):
@@ -139,6 +229,7 @@ def plot_network(
                 arrowprops=dict(
                     arrowstyle="-|>", color="blue", linewidth=0.65, alpha=0.3
                 ),
+                **kwargs
             )
     else:
         print(
@@ -173,8 +264,7 @@ def plot_degrees(scenario: int, year: int, month: int) -> None:
     filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
     ds = xr.open_dataset(filepath)
 
-    # Create subplots for in-degrees and out-degrees
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8))
+    fig, ax1, ax2, kwargs = setup_double_amazon_map(fig_size=(22, 8))
 
     fig.suptitle(
         f"Network In- and Out-Degrees - Year: {year}, Month: {month:02d}", fontsize=16
@@ -187,17 +277,13 @@ def plot_degrees(scenario: int, year: int, month: int) -> None:
         c=in_degrees(ds),
         cmap="viridis",
         s=300,
+        marker="s",
         vmin=0,
         vmax=100,
-        marker="s",
+        **kwargs
     )
 
     ax1.set_title("In-Degrees (Connections To)")
-    ax1.set_xlabel("Longitude")
-    ax1.set_ylabel("Latitude")
-    ax1.set_xlim(-81, -48)
-    ax1.set_ylim(-22, 7)
-    ax1.set_aspect("equal")
     fig.colorbar(sc1, ax=ax1, label="Sum of Connections", shrink=0.78)
 
     # --- Plot 2: Out-Degrees ---
@@ -210,14 +296,10 @@ def plot_degrees(scenario: int, year: int, month: int) -> None:
         vmin=0,
         vmax=350,
         marker="s",
+        **kwargs
     )
 
     ax2.set_title("Out-Degrees (Connections From)")
-    ax2.set_xlabel("Longitude")
-    ax2.set_ylabel("Latitude")
-    ax2.set_xlim(-81, -48)
-    ax2.set_ylim(-22, 7)
-    ax2.set_aspect("equal")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
     plt.savefig(
@@ -243,7 +325,7 @@ def plot_yearly_degrees(scenario: int, year: int) -> None:
     )
     ds = xr.open_dataset(filepath)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8))
+    fig, ax1, ax2, kwargs = setup_double_amazon_map(fig_size=(22, 8))
 
     fig.suptitle(f"Network In- and Out-Degrees - Year: {year}", fontsize=16)
 
@@ -257,14 +339,10 @@ def plot_yearly_degrees(scenario: int, year: int) -> None:
         vmin=0,
         vmax=870,
         marker="s",
+        **kwargs
     )
 
     ax1.set_title("In-Degrees (Connections To)")
-    ax1.set_xlabel("Longitude")
-    ax1.set_ylabel("Latitude")
-    ax1.set_xlim(-81, -48)
-    ax1.set_ylim(-22, 7)
-    ax1.set_aspect("equal")
     fig.colorbar(sc1, ax=ax1, label="Sum of Connections", shrink=0.78)
 
     # --- Plot 2: Out-Degrees ---
@@ -277,14 +355,10 @@ def plot_yearly_degrees(scenario: int, year: int) -> None:
         vmin=0,
         vmax=1700,
         marker="s",
+        **kwargs
     )
 
     ax2.set_title("Out-Degrees (Connections From)")
-    ax2.set_xlabel("Longitude")
-    ax2.set_ylabel("Latitude")
-    ax2.set_xlim(-81, -48)
-    ax2.set_ylim(-22, 7)
-    ax2.set_aspect("equal")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
     plt.savefig(
@@ -308,7 +382,7 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
     filepath = "../data/water/scenario_ssp245_decade2030_month12.nc"
     ds = xr.open_dataset(filepath)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8))
+    fig, ax1, ax2, kwargs = setup_double_amazon_map(fig_size=(22, 8))
 
     fig.suptitle(
         f"Network Difference of In- and Out-Degrees - Year: {year}", fontsize=16
@@ -328,14 +402,10 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
         vmin=-190,
         vmax=190,
         marker="s",
+        **kwargs
     )
 
     ax1.set_title("In-Degrees (Connections To)")
-    ax1.set_xlabel("Longitude")
-    ax1.set_ylabel("Latitude")
-    ax1.set_xlim(-81, -48)
-    ax1.set_ylim(-22, 7)
-    ax1.set_aspect("equal")
     fig.colorbar(sc1, ax=ax1, label="Sum of Connections", shrink=0.78)
 
     # --- Plot 2: Out-Degrees ---
@@ -348,14 +418,10 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
         vmin=-300,
         vmax=300,
         marker="s",
+        **kwargs
     )
 
     ax2.set_title("Out-Degrees (Connections From)")
-    ax2.set_xlabel("Longitude")
-    ax2.set_ylabel("Latitude")
-    ax2.set_xlim(-81, -48)
-    ax2.set_ylim(-22, 7)
-    ax2.set_aspect("equal")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
     plt.savefig(
@@ -384,9 +450,9 @@ def plot_clustering(scenario: int, year: int, month: int) -> None:
     for i in range(ds.sizes["y"]):
         ds["network"].values[i][i] = 0
 
-    plt.figure(figsize=(12, 8))
+    fig, ax, kwargs = setup_amazon_map(fig_size=(12, 8))
 
-    plt.scatter(
+    sc = ax.scatter(
         x=ds["lon"].values,
         y=ds["lat"].values,
         c=clustering_coefficients(ds),
@@ -395,10 +461,10 @@ def plot_clustering(scenario: int, year: int, month: int) -> None:
         marker="s",
         vmin=0,
         vmax=1,
+        **kwargs
     )
 
-    plt.colorbar(label="Clustering Coefficient")
-    plt.grid(True)
+    plt.colorbar(sc, ax=ax, label="Clustering Coefficient")
     plt.title(
         f"Local Clustering Coefficients - Year: {year}, Month: {month:02d}", fontsize=16
     )
@@ -408,7 +474,7 @@ def plot_clustering(scenario: int, year: int, month: int) -> None:
         + f"/clustering_{scenario}_{year}_{month:02d}.png"
     )
     # plt.show()
-    plt.close()
+    plt.close(fig)
 
 
 def plot_ffl(scenario: int, year: int, month: int) -> None:
@@ -430,9 +496,9 @@ def plot_ffl(scenario: int, year: int, month: int) -> None:
     for i in range(ds.sizes["y"]):
         ds["network"].values[i][i] = 0
 
-    plt.figure(figsize=(12, 8))
+    fig, ax, kwargs = setup_amazon_map(fig_size=(12, 8))
 
-    plt.scatter(
+    sc = ax.scatter(
         x=ds["lon"].values,
         y=ds["lat"].values,
         c=feed_forward_loop(ds),
@@ -441,17 +507,55 @@ def plot_ffl(scenario: int, year: int, month: int) -> None:
         marker="s",
         vmin=0,
         vmax=550,
+        **kwargs
     )
 
-    plt.colorbar(label="# of Feed Forward Loops")
-    plt.grid(True)
+    plt.colorbar(sc, ax=ax, label="# of Feed Forward Loops")
     plt.title(f"Feed Forward Loops - Year: {year}, Month: {month:02d}", fontsize=16)
 
     plt.savefig(
         f"../results/plots/FFL/Scenario{scenario}/ffl_{scenario}_{year}_{month:02d}.png"
     )
     # plt.show()
-    plt.close()
+    plt.close(fig)
+
+
+def plot_deforestation(year: int) -> None:
+    """Plot deforestation per year per node.
+
+    Args:
+        year (int): The year to visualize.
+
+    Returns:
+        None. Displays the plot.
+
+    """
+    data_plot = np.genfromtxt(f"../data/deforestation/deforestation_all_BaU_{year}.txt")
+
+    lon = data_plot[:, 0]
+    lat = data_plot[:, 1]
+    deforest = 100*data_plot[:, 2]
+
+    fig, ax, kwargs = setup_amazon_map(fig_size=(12, 8))
+
+    sc = ax.scatter(
+        x=lon,
+        y=lat,
+        c=deforest,
+        cmap="viridis",
+        s=420,
+        marker="s",
+        vmin=0,
+        vmax=100,
+        **kwargs
+    )
+
+    plt.colorbar(sc, ax=ax, label="Deforestation")
+    plt.title(f"Deforestation - Year: {year}")
+
+    plt.savefig(f"../results/plots/Deforestation/deforestation_{year}.png")
+    # plt.show()
+    plt.close(fig)
 
 
 # --- Generalized Diff Plot Function ---
@@ -602,43 +706,6 @@ def plot_all_yearly_diff_ffl() -> None:
         title="Feed Forward Loop Differences: (2030-2100)",
         output_filename="../results/YearlyDiffFFL_all_scenarios.png",
     )
-
-
-def plot_deforestation(year: int) -> None:
-    """Plot deforestation per year per node.
-
-    Args:
-        
-    Returns:
-        None. Displays the plot.
-
-    """
-    data_plot = np.genfromtxt(f"../data/deforestation/deforestation_all_BaU_{year}.txt")
-
-    long = data_plot[:, 0]
-    lat = data_plot[:, 1]
-    deforest = 100*data_plot[:, 2]
-
-    plt.figure(figsize=(12, 8))
-
-    plt.scatter(
-        x=long,
-        y=lat,
-        c=deforest,
-        cmap="viridis",
-        s=420,
-        marker="s",
-        vmin=0,
-        vmax=100,
-    )
-
-    plt.colorbar(label="Deforestation")
-    plt.grid(True)
-    plt.title("Deforestation")
-
-    plt.savefig(f"../results/plots/Deforestation/deforestation_{year}.png")
-    #plt.show()
-    plt.close()
 
 
 if __name__ == "__main__":
