@@ -5,6 +5,8 @@ from pathlib import Path
 from clustering import clustering_coefficients, feed_forward_loop
 from inout import in_degrees, out_degrees, yearly_in_degrees, yearly_out_degrees
 
+from deforestation import yearly_deforestation_inout
+
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -431,6 +433,71 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
     plt.close(fig)
 
 
+def plot_deforest_diff_yearly_degrees(scenario: int, year: int) -> None:
+    """Plot the difference (to 2030) in yearly sum of in-degrees and out-degrees with deforestation.
+
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
+
+    Returns:
+        None. Displays the plot.
+
+    """
+    filepath = "../data/water/scenario_ssp245_decade2030_month12.nc"
+    ds = xr.open_dataset(filepath)
+
+    fig, ax1, ax2, kwargs = setup_double_amazon_map(fig_size=(22, 8))
+
+    fig.suptitle(
+        f"Network Difference of In- and Out-Degrees with Deforestation - Year: {year}", fontsize=16
+    )
+
+    # --- Get Baseline Values for 2030 ---
+    base_in = yearly_in_degrees(scenario, 2030)
+    base_out = yearly_out_degrees(scenario, 2030)
+
+    in_degrees, out_degrees = yearly_deforestation_inout(scenario, year)
+
+    # --- Plot 1: In-Degrees ---
+    sc1 = ax1.scatter(
+        x=ds["lon"],
+        y=ds["lat"],
+        c=(in_degrees - base_in),
+        cmap="coolwarm_r",
+        s=300,
+        vmin=-500,
+        vmax=500,
+        marker="s",
+        **kwargs
+    )
+
+    ax1.set_title("In-Degrees (Connections To)")
+    fig.colorbar(sc1, ax=ax1, label="Sum of Connections", shrink=0.78)
+
+    # --- Plot 2: Out-Degrees ---
+    sc2 = ax2.scatter(
+        x=ds["lon"],
+        y=ds["lat"],
+        c=(out_degrees - base_out),
+        cmap="coolwarm_r",
+        s=300,
+        vmin=-950,
+        vmax=950,
+        marker="s",
+        **kwargs
+    )
+
+    ax2.set_title("Out-Degrees (Connections From)")
+    fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
+
+    plt.savefig(
+        f"../results/plots/Deforestation/Scenario{scenario}/yearly_deforest_diff_degrees_{scenario}_{year}.png"
+    )
+    # plt.show()
+    plt.close(fig)
+
+
 def plot_clustering(scenario: int, year: int, month: int) -> None:
     """Plot the clustering values per node.
 
@@ -710,7 +777,7 @@ def plot_all_yearly_diff_ffl() -> None:
 
 if __name__ == "__main__":
     scenario = 245
-    year = 2035
+    year = 2050
     month = 1
 
     # plot_precipitation(scenario=scenario, year=year, month=month)
@@ -719,7 +786,7 @@ if __name__ == "__main__":
     # plot_degrees(scenario=scenario, year=year, month=month)
     # plot_clustering(scenario=scenario, year=year, month=month)
     # plot_yearly_degrees(scenario=scenario, year=year)
-    # plot_diff_yearly_degrees(scenario=scenario, year=year)
+    plot_deforest_diff_yearly_degrees(scenario=scenario, year=year)
     # plot_yearly_summed_diff_degrees(scenario=scenario)
     # plot_all_yearly_diff_degrees()
     # plot_all_yearly_diff_clustering()

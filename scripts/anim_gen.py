@@ -65,6 +65,12 @@ def anim_gen(
         plot_name = "deforestation"
         out_path = f"../results/Deforestation.mp4"
 
+    elif flag == "DeforestDiffYearInOut":
+        PLOT_DIR = f"../results/plots/Deforestation/Scenario{scenario}"
+        plot_function = pa.plot_deforest_diff_yearly_degrees
+        plot_name = "yearly_deforest_diff_degrees"
+        out_path = f"../results/Scenario_{scenario}_DeforestDiffYearInOutDegrees.mp4"
+
     if PLOT_DIR is None:
         exit(1)
 
@@ -72,6 +78,8 @@ def anim_gen(
     years = range(2030, 2100, 1)
     if flag == "Deforestation":
         years = range(2002, 2051, 1)
+    elif flag == "DeforestDiffYearInOut":
+        years = range(2030, 2051, 1)
     months = range(1, 13, 1)
 
     if not os.path.exists(PLOT_DIR):
@@ -82,6 +90,7 @@ def anim_gen(
         plot_function != pa.plot_yearly_degrees
         and plot_function != pa.plot_diff_yearly_degrees
         and plot_function != pa.plot_deforestation
+        and plot_function != pa.plot_deforest_diff_yearly_degrees
     ):
         for year in years:
             for month in months:
@@ -151,6 +160,7 @@ def anim_gen(
         plot_function == pa.plot_yearly_degrees
         or plot_function == pa.plot_diff_yearly_degrees
         or plot_function == pa.plot_deforestation
+        or plot_function == pa.plot_deforest_diff_yearly_degrees
     ):
         frame_list = sorted(
             frame_files,
@@ -228,5 +238,5 @@ def anim_gen(
 if __name__ == "__main__":
     scenario = 585
     # anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
-    anim_gen(scenario, "Deforestation", delete_after=False)
+    anim_gen(scenario, "DeforestDiffYearInOut", fps=10, delete_after=False)
     # anim_gen(scenario, "FFL")
