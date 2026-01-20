@@ -105,7 +105,7 @@ def feed_forward_loop(ds: xr.Dataset, barrier=CONNECTION_THRESHOLD) -> np.ndarra
 
 # --- Sums and Averages ---
 def yearly_clustering_coefficients(
-    scenario: int, year: int, barrier: float = CONNECTION_THRESHOLD
+    scenario: int, year: int, barrier: float = CONNECTION_THRESHOLD, flag: str = "Forest"
 ) -> np.ndarray:
     """Calculate yearly averaged clustering coefficients per node.
 
@@ -126,11 +126,12 @@ def yearly_clustering_coefficients(
         clustering_coefficients,
         func_args={"barrier": barrier},
         do_average=True,
+        flag=flag,
     )
 
 
 def yearly_feed_forward_loop(
-    scenario: int, year: int, barrier=CONNECTION_THRESHOLD
+    scenario: int, year: int, barrier=CONNECTION_THRESHOLD, flag: str = "Forest"
 ) -> np.ndarray:
     """Calculate yearly averaged # of FFLs per node.
 
@@ -150,11 +151,12 @@ def yearly_feed_forward_loop(
         feed_forward_loop,
         func_args={"barrier": barrier},
         do_average=True,
+        flag=flag
     )
 
 
 def yearly_average_diff_clustering_coefficients(
-    scenario: int, year: int, barrier=CONNECTION_THRESHOLD
+    scenario: int, year: int, barrier=CONNECTION_THRESHOLD, flag: str = "Forest"
 ) -> float:
     """Calculate difference in yearly average of clustering coefficient.
 
@@ -167,15 +169,15 @@ def yearly_average_diff_clustering_coefficients(
         np.ndarray: Difference in yearly average of clustering coefficients.
 
     """
-    current_year = yearly_clustering_coefficients(scenario, year, barrier)
-    base_year = yearly_clustering_coefficients(scenario, 2030, barrier)
+    current_year = yearly_clustering_coefficients(scenario, year, barrier, flag)
+    base_year = yearly_clustering_coefficients(scenario, 2030, barrier, flag)
 
     diff = current_year - base_year
     return np.nansum(diff) / len(diff)  # Take average over all nodes
 
 
 def yearly_average_diff_feed_forward_loop(
-    scenario: int, year: int, barrier=CONNECTION_THRESHOLD
+    scenario: int, year: int, barrier=CONNECTION_THRESHOLD, flag: str = "Forest"
 ) -> float:
     """Calculate difference in yearly average of feed forward loops.
 
@@ -188,17 +190,17 @@ def yearly_average_diff_feed_forward_loop(
         np.ndarray: Difference in yearly average of feed forward loops.
 
     """
-    current_year = yearly_feed_forward_loop(scenario, year, barrier)
-    base_year = yearly_feed_forward_loop(scenario, 2030, barrier)
+    current_year = yearly_feed_forward_loop(scenario, year, barrier, flag)
+    base_year = yearly_feed_forward_loop(scenario, 2030, barrier, flag)
 
     diff = current_year - base_year
     return np.nansum(diff) / len(diff)
 
 
 if __name__ == "__main__":
-    scenario = 245
-    years = list(range(2030, 2100, 10))
+    scenario = 585
+    years = list(range(2030, 2051, 1))
 
     for year in years:
-        clustering_vals = yearly_clustering_coefficients(scenario, year)
-        ffl_vals = yearly_feed_forward_loop(scenario, year)
+        clustering_vals = yearly_average_diff_clustering_coefficients(scenario, year, flag="Forest")
+        ffl_vals = yearly_average_diff_feed_forward_loop(scenario, year, flag="Forest")

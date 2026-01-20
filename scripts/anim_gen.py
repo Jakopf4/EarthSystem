@@ -60,10 +60,10 @@ def anim_gen(
         out_path = f"../results/Scenario_{scenario}_FFL.mp4"
 
     elif flag == "Deforestation":
-        PLOT_DIR = f"../results/plots/Deforestation"
+        PLOT_DIR = "../results/plots/Deforestation"
         plot_function = pa.plot_deforestation
         plot_name = "deforestation"
-        out_path = f"../results/Deforestation.mp4"
+        out_path = "../results/Deforestation.mp4"
 
     elif flag == "DeforestDiffYearInOut":
         PLOT_DIR = f"../results/plots/Deforestation/Scenario{scenario}"
@@ -154,7 +154,6 @@ def anim_gen(
 
     print(f"\nCollected {len(frame_files)} frame files.")
 
-
     # --- Sort by Years only ---
     if (
         plot_function == pa.plot_yearly_degrees
@@ -178,6 +177,8 @@ def anim_gen(
         )
 
     print(f"Found {len(frame_list)} images.")
+
+    frame_list = sorted(frame_list)
 
     # --- Temporary Directory Cleanup and Symlink Creation ---
     tmp_dir = f"./tmp_frames_{scenario}"
@@ -236,7 +237,8 @@ def anim_gen(
 
 
 if __name__ == "__main__":
-    scenario = 585
+    scenario = 370
+    # anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
     # anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
     anim_gen(scenario, "DeforestDiffYearInOut", fps=10, delete_after=False)
     # anim_gen(scenario, "FFL")

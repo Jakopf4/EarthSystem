@@ -1,11 +1,14 @@
 """Script to plot various network metrics and their differences over time."""
 
+import os
+
 from pathlib import Path
 
 from clustering import clustering_coefficients, feed_forward_loop
-from inout import in_degrees, out_degrees, yearly_in_degrees, yearly_out_degrees
 
-from deforestation import yearly_deforestation_inout
+from deforestation import yearly_deforestation_in_degrees, yearly_deforestation_out_degrees
+
+from inout import in_degrees, out_degrees, yearly_in_degrees, yearly_out_degrees
 
 import matplotlib.pyplot as plt
 
@@ -399,7 +402,7 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
         x=ds["lon"],
         y=ds["lat"],
         c=(yearly_in_degrees(scenario, year) - base_in),
-        cmap="coolwarm",
+        cmap="coolwarm_r",
         s=300,
         vmin=-190,
         vmax=190,
@@ -415,7 +418,7 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
         x=ds["lon"],
         y=ds["lat"],
         c=(yearly_out_degrees(scenario, year) - base_out),
-        cmap="coolwarm",
+        cmap="coolwarm_r",
         s=300,
         vmin=-300,
         vmax=300,
@@ -457,13 +460,14 @@ def plot_deforest_diff_yearly_degrees(scenario: int, year: int) -> None:
     base_in = yearly_in_degrees(scenario, 2030)
     base_out = yearly_out_degrees(scenario, 2030)
 
-    in_degrees, out_degrees = yearly_deforestation_inout(scenario, year)
+    in_values = yearly_deforestation_in_degrees(scenario, year)
+    out_values = yearly_deforestation_out_degrees(scenario, year)
 
     # --- Plot 1: In-Degrees ---
     sc1 = ax1.scatter(
         x=ds["lon"],
         y=ds["lat"],
-        c=(in_degrees - base_in),
+        c=(in_values - base_in),
         cmap="coolwarm_r",
         s=300,
         vmin=-500,
@@ -479,7 +483,7 @@ def plot_deforest_diff_yearly_degrees(scenario: int, year: int) -> None:
     sc2 = ax2.scatter(
         x=ds["lon"],
         y=ds["lat"],
-        c=(out_degrees - base_out),
+        c=(out_values - base_out),
         cmap="coolwarm_r",
         s=300,
         vmin=-950,
@@ -491,9 +495,9 @@ def plot_deforest_diff_yearly_degrees(scenario: int, year: int) -> None:
     ax2.set_title("Out-Degrees (Connections From)")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
-    plt.savefig(
-        f"../results/plots/Deforestation/Scenario{scenario}/yearly_deforest_diff_degrees_{scenario}_{year}.png"
-    )
+    OUT_DIR = Path(f"../results/plots/Deforestation/Scenario{scenario}")
+    os.makedirs(OUT_DIR, exist_ok=True)
+    plt.savefig(OUT_DIR / f"yearly_deforest_diff_degrees_{scenario}_{year}.png")
     # plt.show()
     plt.close(fig)
 
@@ -626,7 +630,7 @@ def plot_deforestation(year: int) -> None:
 
 
 # --- Generalized Diff Plot Function ---
-def _plot_scenario_diffs(metric_configs, title, output_filename) -> None:
+def _plot_scenario_diffs(metric_configs, title, output_filename, flag: str = "Forest") -> None:
     """Define a generalized function to plot yearly differences in % for all scenarios.
 
     Args:
@@ -640,7 +644,11 @@ def _plot_scenario_diffs(metric_configs, title, output_filename) -> None:
 
     """
     scenarios = ["245", "370", "585"]
-    years_to_scan = range(2030, 2100, 1)
+    if flag == "Forest":
+        years_to_scan = range(2030, 2100, 1)
+    else:
+        years_to_scan = range(2030, 2051, 1)
+
     colors = ["#ff9900", "#ff0000", "#8400ff"]
 
     results_path = Path("../results/cache")
@@ -697,6 +705,38 @@ def _plot_scenario_diffs(metric_configs, title, output_filename) -> None:
                     alpha=0.9,
                 )
 
+            if flag == "Deforest":
+                # --- Now plot deforestation data if available ---
+                plot_years_def = []
+                diff_values_def = []
+
+                for year in years_to_scan:
+                    file_path_deforest = results_path / f"Deforest_{prefix}_{scenario}_{year}.nc"
+
+                    if file_path_deforest.exists():
+                        with xr.open_dataarray(file_path_deforest) as da_curr_def:
+                            curr_values_def = da_curr_def.values
+
+                        # Calculate Difference in %
+                        diff_def = np.nanmean(curr_values_def - base_values)
+                        diff_perc_def = (diff_def / np.nanmean(base_values)) * 100
+
+                        plot_years_def.append(year)
+                        diff_values_def.append(diff_perc_def)
+
+                # --- Plot the deforestation data ---
+                if plot_years_def:
+                    ax.plot(
+                        plot_years_def,
+                        diff_values_def,
+                        label=f"{label_prefix} Deforestation Scenario {scenario}",
+                        color=scenario_color,
+                        linestyle=":",
+                        alpha=0.9,
+                    )
+
+    plt.xticks(range(2030, 2051, 5))
+
     ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
     ax.set_xlabel("Year", fontsize=12)
     ax.set_ylabel("Average Difference per Node [%]", fontsize=12)
@@ -718,7 +758,7 @@ def _plot_scenario_diffs(metric_configs, title, output_filename) -> None:
 
 
 # --- Individual Difference Plot Functions ---
-def plot_all_yearly_diff_degrees() -> None:
+def plot_all_yearly_diff_degrees(flag: str = "Forest") -> None:
     """Plot course of yearly differences in in-degrees and out-degrees in %.
 
     Args:
@@ -728,18 +768,30 @@ def plot_all_yearly_diff_degrees() -> None:
         None. Displays the plot.
 
     """
-    configs = [
-        {"prefix": "indegrees", "linestyle": "-", "label": "In-Degrees"},
-        {"prefix": "outdegrees", "linestyle": "--", "label": "Out-Degrees"},
-    ]
-    _plot_scenario_diffs(
-        metric_configs=configs,
-        title="Network Degree Differences: (2030-2100)",
-        output_filename="../results/YearlySummedDiffDegrees_all_scenarios.png",
-    )
+    if flag == "Forest":
+        configs = [
+            {"prefix": "indegrees", "linestyle": "-", "label": "In-Degrees"},
+            {"prefix": "outdegrees", "linestyle": "--", "label": "Out-Degrees"},
+        ]
+        _plot_scenario_diffs(
+            metric_configs=configs,
+            title="Network Degree Differences: (2030-2100)",
+            output_filename="../results/YearlySummedDiffDegrees.png",
+        )
+
+    elif flag == "Deforest":
+        configs = [
+            {"prefix": "indegrees", "linestyle": "-", "label": "In-Degrees"},
+        ]
+        _plot_scenario_diffs(
+            metric_configs=configs,
+            title="Network Degree Differences with Deforestation: (2030-2050)",
+            output_filename="../results/YearlySummedDiffDegrees_Deforest.png",
+            flag="Deforest"
+        )
 
 
-def plot_all_yearly_diff_clustering() -> None:
+def plot_all_yearly_diff_clustering(flag: str = "Forest") -> None:
     """Plot course of yearly differences in clustering in %.
 
     Args:
@@ -749,15 +801,25 @@ def plot_all_yearly_diff_clustering() -> None:
         None. Displays the plot.
 
     """
-    configs = [{"prefix": "clustering", "linestyle": "-", "label": "Clustering Diff"}]
-    _plot_scenario_diffs(
-        metric_configs=configs,
-        title="Clustering Differences: (2030-2100)",
-        output_filename="../results/YearlyDiffClustering_all_scenarios.png",
-    )
+    if flag == "Forest":
+        configs = [{"prefix": "clustering", "linestyle": "-", "label": "Clustering Diff"}]
+        _plot_scenario_diffs(
+            metric_configs=configs,
+            title="Clustering Differences: (2030-2100)",
+            output_filename="../results/YearlyDiffClustering.png",
+        )
+
+    elif flag == "Deforest":
+        configs = [{"prefix": "clustering", "linestyle": "-", "label": "Clustering Diff"}]
+        _plot_scenario_diffs(
+            metric_configs=configs,
+            title="Clustering Differences with Deforestation: (2030-2050)",
+            output_filename="../results/YearlyDiffClustering_Deforest.png",
+            flag="Deforest"
+        )
 
 
-def plot_all_yearly_diff_ffl() -> None:
+def plot_all_yearly_diff_ffl(flag: str = "Forest") -> None:
     """Plot course of yearly differences in feed-forward loops in %.
 
     Args:
@@ -767,16 +829,26 @@ def plot_all_yearly_diff_ffl() -> None:
         None. Displays the plot.
 
     """
-    configs = [{"prefix": "ffl", "linestyle": "-", "label": "FFL Diff"}]
-    _plot_scenario_diffs(
-        metric_configs=configs,
-        title="Feed Forward Loop Differences: (2030-2100)",
-        output_filename="../results/YearlyDiffFFL_all_scenarios.png",
-    )
+    if flag == "Forest":
+        configs = [{"prefix": "ffl", "linestyle": "-", "label": "FFL Diff"}]
+        _plot_scenario_diffs(
+            metric_configs=configs,
+            title="Feed Forward Loop Differences: (2030-2100)",
+            output_filename="../results/YearlyDiffFFL.png",
+        )
+
+    elif flag == "Deforest":
+        configs = [{"prefix": "ffl", "linestyle": "-", "label": "FFL Diff"}]
+        _plot_scenario_diffs(
+            metric_configs=configs,
+            title="Feed Forward Loop Differences with Deforestation: (2030-2050)",
+            output_filename="../results/YearlyDiffFFL_Deforest.png",
+            flag="Deforest"
+        )
 
 
 if __name__ == "__main__":
-    scenario = 245
+    scenario = 585
     year = 2050
     month = 1
 
@@ -786,9 +858,9 @@ if __name__ == "__main__":
     # plot_degrees(scenario=scenario, year=year, month=month)
     # plot_clustering(scenario=scenario, year=year, month=month)
     # plot_yearly_degrees(scenario=scenario, year=year)
-    plot_deforest_diff_yearly_degrees(scenario=scenario, year=year)
+    # plot_deforest_diff_yearly_degrees(scenario=scenario, year=year)
     # plot_yearly_summed_diff_degrees(scenario=scenario)
-    # plot_all_yearly_diff_degrees()
-    # plot_all_yearly_diff_clustering()
-    # plot_all_yearly_diff_ffl()
+    # plot_all_yearly_diff_degrees(flag="Forest")
+    # plot_all_yearly_diff_clustering(flag="Forest")
+    # plot_all_yearly_diff_ffl(flag="Forest")
     # plot_deforestation(year=2002)

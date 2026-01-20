@@ -28,6 +28,21 @@ def get_filename(metric_name: str, scenario: int, year: int) -> str:
     return os.path.join(OUTPUT_DIR, f"{metric_name}_{scenario}_{year}.nc")
 
 
+def get_filename_deforest(metric_name: str, scenario: int, year: int) -> str:
+    """Get the deforestation filename for caching the computed metric.
+
+    Args:
+        metric_name (str): Name of the metric
+        scenario (int): Scenario identifier
+        year (int): Year of the data
+
+    Returns:
+        str: Full path to the cached file
+
+    """
+    return os.path.join(OUTPUT_DIR, f"Deforest_{metric_name}_{scenario}_{year}.nc")
+
+
 def compute_and_cache(
     scenario: int,
     year: int,
@@ -35,6 +50,7 @@ def compute_and_cache(
     metric_func,
     func_args: dict = {},
     do_average: bool = True,
+    flag: str = "Forest"
 ) -> np.ndarray:
     """
     Universal function to handle caching, computing, and saving.
@@ -47,11 +63,16 @@ def compute_and_cache(
         func_args (dict, optional): Additional arguments for the metric function. Defaults to {}.
         do_average (bool): Decide if yearly averaged or cumulative value is returned. Default True.
 
+        Stores the computed metric in a NetCDF file if not already cached.
+
     Returns:
         np.ndarray: Computed metric values
 
     """
-    filepath = get_filename(metric_name, scenario, year)
+    if flag == "Deforest":
+        filepath = get_filename_deforest(metric_name, scenario, year)
+    elif flag == "Forest":
+        filepath = get_filename(metric_name, scenario, year)
 
     if os.path.exists(filepath):
         with xr.open_dataarray(filepath) as da:
@@ -62,13 +83,23 @@ def compute_and_cache(
     cumulative_value = None
 
     for month in range(1, 13):
-        file_p = os.path.join(
-            DATA_DIR, f"scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
-        )
+        if flag == "Forest":
+            file_p = os.path.join(
+                DATA_DIR, f"scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+            )
+
+        elif flag == "Deforest":
+            file_p = os.path.join(
+                "../data/deforestation",
+                f"deforestation_scenario_ssp{scenario}_decade_{year}_month{month:02d}.nc"
+            )
         ds = xr.open_dataset(file_p)
 
         # Call the metric function with whatever arguments it needs (barrier, etc.)
-        val = metric_func(ds, **func_args)
+        try:
+            val = metric_func(ds, **func_args)
+        except TypeError:
+            val = metric_func(scenario, year, **func_args)
 
         if cumulative_value is None:
             cumulative_value = val
