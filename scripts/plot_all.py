@@ -2,6 +2,8 @@
 
 import os
 
+import copy  # Important for modifying the colormap safely
+
 from pathlib import Path
 
 from clustering import clustering_coefficients, feed_forward_loop
@@ -847,6 +849,77 @@ def plot_all_yearly_diff_ffl(flag: str = "Forest") -> None:
         )
 
 
+def plot_dieoff(scenario: int, year: int, flag: str = "Forest") -> None:
+    """Generate a plot showing dying cells (<1000mm) in black and others in White-Red.
+
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The specific year to plot (Added this arg as it was missing).
+        flag (str): Toggle between "Forest" and "Deforest" logic.
+    """
+    filepath_base = "../data/water/scenario_ssp245_decade2030_month12.nc"
+    ds = xr.open_dataset(filepath_base)
+
+    for month in range(1, 13):
+        filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{month:02d}.nc"
+        ds_month = xr.open_dataset(filepath)
+
+        if month == 1:
+            prec_sum = copy.deepcopy(ds_month["prec"])
+        else:
+            prec_sum += ds_month["prec"]
+
+    fig, ax, kwargs = setup_amazon_map(fig_size=(12, 8))
+
+    import matplotlib.colors as mcolors
+    colors = ["red", "white"]
+    cmap = mcolors.LinearSegmentedColormap.from_list("white_red", colors)
+    cmap.set_under('black')
+
+    if flag == "Forest":
+        title_text = f"Savanization of the Amazon Rainforest - Year: {year}"
+        values = prec_sum
+    elif flag == "Deforest":
+        title_text = f"Savanization of the Amazon Rainforest with Deforestation - Year: {year}"
+        values = prec_sum + yearly_deforestation_in_degrees(scenario, year) \
+            - yearly_in_degrees(scenario, year)
+
+    fig.suptitle(title_text, fontsize=16)
+
+    colors = ['orange', 'forestgreen']
+    bounds = [1000, 1500, 4000]
+
+    cmap = mcolors.ListedColormap(colors)
+    cmap.set_under('black')
+    norm = mcolors.BoundaryNorm(bounds, cmap.N)
+
+    # --- 5. Plotting ---
+    sc = ax.scatter(
+        x=ds["lon"],
+        y=ds["lat"],
+        c=values,
+        cmap=cmap,
+        norm=norm,
+        s=320,
+        marker="s",
+        **kwargs
+    )
+
+    cbar = fig.colorbar(sc, ax=ax, label="Incoming water (mm/year)", shrink=0.78, extend='min')
+
+    cbar.set_ticks([1000, 1500])
+    cbar.set_ticklabels(['1000 (Collapse)', '1500 (Risk)'])
+
+    cbar.cmap.set_under('black')
+    if flag == "Forest":
+        plt.savefig(f"../results/plots/Dieoff/Scenario{scenario}/dieoff_{scenario}_{year}.png")
+    elif flag == "Deforest":
+        plt_name = f"deforest_dieoff_{scenario}_{year}.png"
+        plt.savefig(f"../results/plots/Dieoff/Scenario{scenario}/{plt_name}")
+    # plt.show()
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     scenario = 585
     year = 2050
@@ -864,3 +937,6 @@ if __name__ == "__main__":
     # plot_all_yearly_diff_clustering(flag="Forest")
     # plot_all_yearly_diff_ffl(flag="Forest")
     # plot_deforestation(year=2002)
+
+    for year in range(2030, 2100):
+        plot_dieoff(scenario=scenario, year=year, flag="Forest")
