@@ -146,7 +146,13 @@ def plot_precipitation(scenario: int, year: int, month: int) -> None:
     plt.colorbar(sc, ax=ax, label="Precipitation")
     plt.title(f"Precipitation - SSP {scenario}, Year: {year}, Month: {month:02d}", fontsize=16)
 
-    # plt.savefig(f"../results/plots/precipitation_{scenario}_{year}_{month:02d}.png")
+    out_path = f"../results/plots/precipitation_{scenario}_{year}_{month:02d}.png"
+
+    out_dir = os.path.dirname(out_path)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
     plt.show()
     plt.close(fig)
 
@@ -183,7 +189,13 @@ def plot_evaporation(scenario: int, year: int, month: int) -> None:
     plt.colorbar(sc, ax=ax, label="Evaporation")
     plt.title(f"Evaporation - SSP {scenario}, Year: {year}, Month: {month:02d}", fontsize=16)
 
-    # plt.savefig(f"../results/plots/evaporation_{scenario}_{year}_{month:02d}.png")
+    out_path = f"../results/plots/evaporation_{scenario}_{year}_{month:02d}.png"
+
+    out_dir = os.path.dirname(out_path)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
     plt.show()
     plt.close(fig)
 
@@ -251,7 +263,13 @@ def plot_network(
     ax.set_ylabel("Latitude")
     ax.grid(True)
 
-    # plt.savefig(f"../results/plots/network_{scenario}_{year}_{month:02d}.png")
+    out_path = f"../results/plots/network_{scenario}_{year}_{month:02d}.png"
+
+    out_dir = os.path.dirname(out_path)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
     plt.show()
     plt.close(fig)
 
@@ -309,10 +327,14 @@ def plot_degrees(scenario: int, year: int, month: int) -> None:
     ax2.set_title("Out-Degrees (Connections From)")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
-    plt.savefig(
-        f"../results/plots/InOut/Scenario{scenario}/degrees_{scenario}_{year}_{month:02d}.png"
-    )
-    # plt.show()
+    out_dir = f"../results/plots/InOut/Scenario{scenario}/"
+    out_path = out_dir + f"degrees_{scenario}_{year}_{month:02d}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    plt.show()
     plt.close(fig)
 
 
@@ -368,10 +390,14 @@ def plot_yearly_degrees(scenario: int, year: int) -> None:
     ax2.set_title("Out-Degrees (Connections From)")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
-    plt.savefig(
-        f"../results/plots/YearInOut/Scenario{scenario}/yearly_degrees_{scenario}_{year}.png"
-    )
-    # plt.show()
+    out_dir = f"../results/plots/YearInOut/Scenario{scenario}/"
+    out_path = out_dir + f"yearly_degrees_{scenario}_{year}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    plt.show()
     plt.close(fig)
 
 
@@ -431,10 +457,14 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
     ax2.set_title("Out-Degrees (Connections From)")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
-    plt.savefig(
-        f"../results/plots/YearInOut/Scenario{scenario}/yearly_diff_degrees_{scenario}_{year}.png"
-    )
-    # plt.show()
+    out_dir = f"../results/plots/YearInOut/Scenario{scenario}/"
+    out_path = out_dir + f"yearly_diff_degrees_{scenario}_{year}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    plt.show()
     plt.close(fig)
 
 
@@ -497,10 +527,14 @@ def plot_deforest_diff_yearly_degrees(scenario: int, year: int) -> None:
     ax2.set_title("Out-Degrees (Connections From)")
     fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
 
-    OUT_DIR = Path(f"../results/plots/Deforestation/Scenario{scenario}")
-    os.makedirs(OUT_DIR, exist_ok=True)
-    plt.savefig(OUT_DIR / f"yearly_deforest_diff_degrees_{scenario}_{year}.png")
-    # plt.show()
+    out_dir = f"../results/plots/Deforestation/Scenario{scenario}/"
+    out_path = out_dir + f"yearly_deforest_diff_degrees_{scenario}_{year}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    plt.show()
     plt.close(fig)
 
 
@@ -542,11 +576,14 @@ def plot_clustering(scenario: int, year: int, month: int) -> None:
         f"Local Clustering Coefficients - Year: {year}, Month: {month:02d}", fontsize=16
     )
 
-    plt.savefig(
-        f"../results/plots/Clustering/Scenario{scenario}"
-        + f"/clustering_{scenario}_{year}_{month:02d}.png"
-    )
-    # plt.show()
+    out_dir = f"../results/plots/Clustering/Scenario{scenario}/"
+    out_path = out_dir + f"clustering_{scenario}_{year}_{month:02d}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    plt.show()
     plt.close(fig)
 
 
@@ -586,10 +623,14 @@ def plot_ffl(scenario: int, year: int, month: int) -> None:
     plt.colorbar(sc, ax=ax, label="# of Feed Forward Loops")
     plt.title(f"Feed Forward Loops - Year: {year}, Month: {month:02d}", fontsize=16)
 
-    plt.savefig(
-        f"../results/plots/FFL/Scenario{scenario}/ffl_{scenario}_{year}_{month:02d}.png"
-    )
-    # plt.show()
+    out_dir = f"../results/plots/FFL/Scenario{scenario}/"
+    out_path = out_dir + f"ffl_{scenario}_{year}_{month:02d}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    plt.show()
     plt.close(fig)
 
 
@@ -626,8 +667,14 @@ def plot_deforestation(year: int) -> None:
     plt.colorbar(sc, ax=ax, label="Deforestation")
     plt.title(f"Deforestation - Year: {year}")
 
-    plt.savefig(f"../results/plots/Deforestation/deforestation_{year}.png")
-    # plt.show()
+    out_dir = "../results/plots/Deforestation/"
+    out_path = out_dir + f"deforestation_{year}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    plt.show()
     plt.close(fig)
 
 
@@ -752,6 +799,10 @@ def _plot_scenario_diffs(metric_configs, title, output_filename, flag: str = "Fo
 
     ax.legend(loc="best", frameon=True, fontsize=10)
     plt.tight_layout()
+
+    out_dir = os.path.dirname(output_filename)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
 
     plt.savefig(output_filename)
     print(f"Plot saved to {output_filename}")
@@ -912,11 +963,18 @@ def plot_dieoff(scenario: int, year: int, flag: str = "Forest") -> None:
 
     cbar.cmap.set_under('black')
     if flag == "Forest":
-        plt.savefig(f"../results/plots/Dieoff/Scenario{scenario}/dieoff_{scenario}_{year}.png")
+        out_dir = f"../results/plots/Dieoff/Scenario{scenario}/"
+        out_path = out_dir + f"dieoff_{scenario}_{year}.png"
+
     elif flag == "Deforest":
-        plt_name = f"deforest_dieoff_{scenario}_{year}.png"
-        plt.savefig(f"../results/plots/Dieoff/Scenario{scenario}/{plt_name}")
-    # plt.show()
+        out_dir = f"../results/plots/Dieoff/Scenario{scenario}/"
+        out_path = out_dir + f"deforest_dieoff_{scenario}_{year}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    plt.show()
     plt.close(fig)
 
 
@@ -938,5 +996,5 @@ if __name__ == "__main__":
     # plot_all_yearly_diff_ffl(flag="Forest")
     # plot_deforestation(year=2002)
 
-    for year in range(2030, 2100):
+    for year in range(2030, 2031):
         plot_dieoff(scenario=scenario, year=year, flag="Forest")
