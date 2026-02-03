@@ -90,7 +90,7 @@ def deforestation_out_degrees(scenario: int, year: int, month: int):
         scenario (int): SSP scenario number.
         year (int): Year of the scenario.
         month (int): Month of the scenario.
-        
+
     Returns:
         out_values (np.ndarray): Array of out-degrees per node.
 
