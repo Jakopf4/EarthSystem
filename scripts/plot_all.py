@@ -8,11 +8,12 @@ from pathlib import Path
 
 from clustering import clustering_coefficients, feed_forward_loop
 
-from deforestation import yearly_deforestation_in_degrees, yearly_deforestation_out_degrees, deforestation_in_degrees
+from deforestation import yearly_deforestation_in_degrees, yearly_deforestation_out_degrees
 
 from inout import in_degrees, out_degrees, yearly_in_degrees, yearly_out_degrees
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 import numpy as np
 
@@ -158,19 +159,21 @@ def plot_precipitation(scenario: int, year: int, month: int) -> None:
 
 
 def plot_MAP_with_deforestation(scenario: int) -> None:
+    """Plot Mean Annual Precipitation (MAP) comparison directly from data files.
+
+    Args:
+        scenario (int): The SSP scenario identifier (e.g., "245", "370", "585").
+
+    Returns:
+        None. Displays and saves the plot.
     """
-    Plots Mean Annual Precipitation (MAP) comparison directly from data files.
-    Reads 'prec' from BaU files and Deforestation files and plots the means.
-    """
-    
     years_range = range(2030, 2051)
     fig, ax = plt.subplots(figsize=(10, 6), dpi=150)
     colors = ["#ff9900", "#ff0000", "#8400ff"]
 
-
     for scenario in [245, 370, 585]:
-        MAP_forest = []       # Business as Usual
-        MAP_deforest = []  # With Deforestation
+        MAP_forest = []
+        MAP_deforest = []
 
         print(f"Lese Daten für Szenario SSP{scenario}...")
 
@@ -184,57 +187,56 @@ def plot_MAP_with_deforestation(scenario: int) -> None:
                     prec_sum += ds["prec"].values
 
             values_no_def = prec_sum.sum()/416
-            values_def = (prec_sum.sum() + yearly_deforestation_in_degrees(scenario, y).sum() \
-                                - yearly_in_degrees(scenario, y).sum())/416
-            
+            values_def = (prec_sum.sum() + yearly_deforestation_in_degrees(scenario, y).sum()
+                          - yearly_deforestation_out_degrees(scenario, y).sum())/416
+
             MAP_forest.append(values_no_def)
             MAP_deforest.append(values_def)
 
-        # -------------------------------------------------------
-        # PLOTTING
-        # -------------------------------------------------------
-
         ax.set_ylim(1500, 2000)
-        # Linie 1: Ohne Deforestation
+        # Without Deforestation
         ax.plot(
-            years_range, 
-            MAP_forest, 
-            label="No Deforestation - Scenario SSP"+str(scenario), 
+            years_range,
+            MAP_forest,
+            label="No Deforestation - Scenario SSP"+str(scenario),
             color=colors[[245, 370, 585].index(scenario)],
-            linestyle="-", 
+            linestyle="-",
             alpha=0.9
         )
 
-        # Linie 2: Mit Deforestation
+        # With Deforestation
         ax.plot(
-            years_range, 
-            MAP_deforest, 
-            label="With Deforestation - Scenario SSP"+str(scenario), 
+            years_range,
+            MAP_deforest,
+            label="With Deforestation - Scenario SSP"+str(scenario),
             color=colors[[245, 370, 585].index(scenario)],
-            linestyle=":", 
+            linestyle=":",
             alpha=0.9
         )
 
-    ax.axhline(y=1800, color="#8A7102", linestyle="--", linewidth=2, alpha=0.5, label="Bistable Threshold (1800 mm)")
-   
+    # Savannization Threshold Line
+    ax.axhline(y=1800,
+               color="#8A7102",
+               linestyle="--",
+               linewidth=2,
+               alpha=0.5,
+               label="Bistable Threshold (1800 mm)")
 
-    # Styling
-    title = f"Mean Annual Precipitation Comparison with Deforestation"
+    title = "Mean Annual Precipitation Comparison with Deforestation"
     ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
     plt.xticks(range(2030, 2051, 5))
     ax.set_xlabel("Year")
     ax.set_ylabel("Mean Annual Precipitation [mm]")
     ax.legend()
     ax.grid(True, linestyle="--", alpha=0.5)
-    
+
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    # Speichern
     output_path = f"../results/MAP_Comparison_SSP{scenario}.png"
     plt.savefig(output_path)
     print(f"Plot erstellt: {output_path}")
-    
+
     plt.show()
     plt.close()
 
@@ -734,11 +736,14 @@ def plot_deforestation(year: int) -> None:
 
     fig, ax, kwargs = setup_amazon_map(fig_size=(12, 8))
 
+    colors = ["green", "black"]
+    g_b_cmap = LinearSegmentedColormap.from_list("green_black", colors)
+
     sc = ax.scatter(
         x=lon,
         y=lat,
         c=deforest,
-        cmap="viridis",
+        cmap=g_b_cmap,
         s=420,
         marker="s",
         vmin=0,
@@ -746,8 +751,9 @@ def plot_deforestation(year: int) -> None:
         **kwargs
     )
 
-    plt.colorbar(sc, ax=ax, label="Deforestation")
-    plt.title(f"Deforestation - Year: {year}")
+    plt.colorbar(sc, ax=ax, label="Deforestation [%]")
+    title = f"Deforestation - Year: {year}"
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
 
     out_dir = "../results/plots/Deforestation/"
     out_path = out_dir + f"deforestation_{year}.png"
@@ -756,7 +762,7 @@ def plot_deforestation(year: int) -> None:
         os.makedirs(out_dir)
 
     plt.savefig(out_path)
-    plt.show()
+    # plt.show()
     plt.close(fig)
 
 
@@ -1078,5 +1084,3 @@ if __name__ == "__main__":
     # plot_all_yearly_diff_ffl(flag="Forest")
     # plot_deforestation(year=2002)
     plot_MAP_with_deforestation(scenario=scenario)
-
-   
