@@ -64,12 +64,13 @@ def deforestation_network(scenario: int, year: int, month: int):
     return deforested_matrix
 
 
-def deforestation_in_degrees(scenario: int, year: int):
+def deforestation_in_degrees(scenario: int, year: int, month: int):
     """Calculate in-degrees of nodes in the network with deforestation.
 
     Args:
         scenario (int): SSP scenario number.
         year (int): Year of the scenario.
+        month (int): Month of the scenario.
 
     Returns:
         in_values (np.ndarray): Array of in-degrees per node.
@@ -82,13 +83,14 @@ def deforestation_in_degrees(scenario: int, year: int):
     return in_values
 
 
-def deforestation_out_degrees(scenario: int, year: int):
+def deforestation_out_degrees(scenario: int, year: int, month: int):
     """Calculate out-degrees of nodes in the network with deforestation.
 
     Args:
         scenario (int): SSP scenario number.
         year (int): Year of the scenario.
-
+        month (int): Month of the scenario.
+        
     Returns:
         out_values (np.ndarray): Array of out-degrees per node.
 
