@@ -188,7 +188,7 @@ def plot_MAP_with_deforestation(scenario: int) -> None:
 
             values_no_def = prec_sum.sum()/416
             values_def = (prec_sum.sum() + yearly_deforestation_in_degrees(scenario, y).sum()
-                          - yearly_deforestation_out_degrees(scenario, y).sum())/416
+                          - yearly_in_degrees(scenario, y).sum())/416
 
             MAP_forest.append(values_no_def)
             MAP_deforest.append(values_def)
