@@ -233,7 +233,7 @@ def plot_MAP_with_deforestation(scenario: int) -> None:
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    output_path = f"../results/MAP_Comparison_SSP{scenario}.png"
+    output_path = "../results/MAP_Comparison.png"
     plt.savefig(output_path)
     print(f"Plot erstellt: {output_path}")
 
