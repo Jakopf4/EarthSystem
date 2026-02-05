@@ -269,9 +269,9 @@ def anim_gen(
 
 
 if __name__ == "__main__":
-    scenario = 245
+    scenario = 585
     # anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
     # anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
-    # anim_gen(scenario, "DieoffForest", fps=10, delete_after=False)
+    anim_gen(scenario, "DieoffForest", fps=10, delete_after=False)
     # anim_gen(scenario, "FFL")
-    anim_gen(scenario, "DiffYearFFL", fps=10, delete_after=False)
+    # nim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)

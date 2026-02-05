@@ -523,7 +523,7 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
     )
 
     ax1.set_title("In-Degrees (Connections To)")
-    fig.colorbar(sc1, ax=ax1, label="Sum of Connections", shrink=0.78)
+    fig.colorbar(sc1, ax=ax1, label="Difference in Incoming Water [mm/year]", shrink=0.78)
 
     # --- Plot 2: Out-Degrees ---
     sc2 = ax2.scatter(
@@ -539,7 +539,7 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
     )
 
     ax2.set_title("Out-Degrees (Connections From)")
-    fig.colorbar(sc2, ax=ax2, label="Sum of Connections", shrink=0.78)
+    fig.colorbar(sc2, ax=ax2, label="Difference in Outgoing Water [mm/year]", shrink=0.78)
 
     out_dir = f"../results/plots/YearInOut/Scenario{scenario}/"
     out_path = out_dir + f"yearly_diff_degrees_{scenario}_{year}.png"
@@ -548,7 +548,7 @@ def plot_diff_yearly_degrees(scenario: int, year: int) -> None:
         os.makedirs(out_dir)
 
     plt.savefig(out_path)
-    plt.show()
+    # plt.show()
     plt.close(fig)
 
 
@@ -1124,7 +1124,7 @@ def plot_dieoff(scenario: int, year: int, flag: str = "Forest") -> None:
     fig.suptitle(title_text, fontsize=16)
 
     colors = ['orange', 'forestgreen']
-    bounds = [1000, 1500, 4000]
+    bounds = [1000, 1800, 4000]
 
     cmap = mcolors.ListedColormap(colors)
     cmap.set_under('black')
@@ -1144,8 +1144,8 @@ def plot_dieoff(scenario: int, year: int, flag: str = "Forest") -> None:
 
     cbar = fig.colorbar(sc, ax=ax, label="Incoming water (mm/year)", shrink=0.78, extend='min')
 
-    cbar.set_ticks([1000, 1500])
-    cbar.set_ticklabels(['1000 (Collapse)', '1500 (Risk)'])
+    cbar.set_ticks([1000, 1800])
+    cbar.set_ticklabels(['1000 (Collapse)', '1800 (Risk)'])
 
     cbar.cmap.set_under('black')
     if flag == "Forest":
@@ -1160,7 +1160,7 @@ def plot_dieoff(scenario: int, year: int, flag: str = "Forest") -> None:
         os.makedirs(out_dir)
 
     plt.savefig(out_path)
-    plt.show()
+    # plt.show()
     plt.close(fig)
 
 
@@ -1184,5 +1184,5 @@ if __name__ == "__main__":
     # plot_MAP_with_deforestation(scenario=scenario)
 
     scenario = 585
-    for year in range(2030, 2100):
-        plot_diff_yearly_ffl(scenario=scenario, year=year)
+    for year in range(2030, 2051):
+        plot_dieoff(scenario=scenario, year=year, flag="Deforest")
