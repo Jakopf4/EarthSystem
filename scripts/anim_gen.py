@@ -53,11 +53,23 @@ def anim_gen(
         plot_name = "clustering"
         out_path = f"../results/Scenario_{scenario}_Clustering.mp4"
 
+    elif flag == "DiffYearClustering":
+        PLOT_DIR = f"../results/plots/Clustering/Scenario{scenario}"
+        plot_function = pa.plot_diff_yearly_clustering
+        plot_name = "yearly_diff_clustering"
+        out_path = f"../results/Scenario_{scenario}_YearDiffClustering.mp4"
+
     elif flag == "FFL":
         PLOT_DIR = f"../results/plots/FFL/Scenario{scenario}"
         plot_function = pa.plot_ffl
         plot_name = "ffl"
         out_path = f"../results/Scenario_{scenario}_FFL.mp4"
+
+    elif flag == "DiffYearFFL":
+        PLOT_DIR = f"../results/plots/FFL/Scenario{scenario}"
+        plot_function = pa.plot_diff_yearly_ffl
+        plot_name = "yearly_diff_ffl"
+        out_path = f"../results/Scenario_{scenario}_YearDiffFFL.mp4"
 
     elif flag == "Deforestation":
         PLOT_DIR = "../results/plots/Deforestation"
@@ -101,6 +113,8 @@ def anim_gen(
     if (
         plot_function != pa.plot_yearly_degrees
         and plot_function != pa.plot_diff_yearly_degrees
+        and plot_function != pa.plot_diff_yearly_clustering
+        and plot_function != pa.plot_diff_yearly_ffl
         and plot_function != pa.plot_deforestation
         and plot_function != pa.plot_deforest_diff_yearly_degrees
         and plot_function != pa.plot_dieoff
@@ -172,6 +186,8 @@ def anim_gen(
     if (
         plot_function == pa.plot_yearly_degrees
         or plot_function == pa.plot_diff_yearly_degrees
+        or plot_function == pa.plot_diff_yearly_clustering
+        or plot_function == pa.plot_diff_yearly_ffl
         or plot_function == pa.plot_deforestation
         or plot_function == pa.plot_deforest_diff_yearly_degrees
         or plot_function == pa.plot_dieoff
@@ -253,8 +269,9 @@ def anim_gen(
 
 
 if __name__ == "__main__":
-    scenario = 585
+    scenario = 245
     # anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
     # anim_gen(scenario, "DiffYearInOut", fps=10, delete_after=False)
-    anim_gen(scenario, "DieoffForest", fps=10, delete_after=False)
+    # anim_gen(scenario, "DieoffForest", fps=10, delete_after=False)
     # anim_gen(scenario, "FFL")
+    anim_gen(scenario, "DiffYearFFL", fps=10, delete_after=False)

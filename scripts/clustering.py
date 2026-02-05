@@ -88,6 +88,21 @@ def clustering_coefficients(ds: xr.Dataset, barrier=CONNECTION_THRESHOLD) -> np.
     return coeffs
 
 
+def yearly_clustering(scenario: int, year: int) -> np.ndarray:
+    """Calculate yearly averaged Clustering Coefficients of nodes in the network.
+
+    Args:
+        ds (xr.Dataset): Input dataset containing 'network' variable.
+
+    Returns:
+        np.ndarray: Array of yearly clustering per node.
+
+    """
+    return compute_and_cache(
+        scenario, year, "clustering", clustering_coefficients, func_args={}, do_average=True
+    )
+
+
 def feed_forward_loop(ds: xr.Dataset, barrier=CONNECTION_THRESHOLD) -> np.ndarray:
     """Calculate the feed forward loops for nodes.
 
@@ -101,6 +116,21 @@ def feed_forward_loop(ds: xr.Dataset, barrier=CONNECTION_THRESHOLD) -> np.ndarra
     """
     # This is just # of actual_connections
     return actual_connections(ds, barrier)
+
+
+def yearly_ffl(scenario: int, year: int) -> np.ndarray:
+    """Calculate yearly averaged Feed Forward Loops of nodes in the network.
+
+    Args:
+        ds (xr.Dataset): Input dataset containing 'network' variable.
+
+    Returns:
+        np.ndarray: Array of yearly feed forward loops per node.
+
+    """
+    return compute_and_cache(
+        scenario, year, "ffl", feed_forward_loop, func_args={}, do_average=True
+    )
 
 
 # --- Sums and Averages ---

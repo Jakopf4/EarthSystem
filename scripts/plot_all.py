@@ -6,7 +6,7 @@ import copy  # Important for modifying the colormap safely
 
 from pathlib import Path
 
-from clustering import clustering_coefficients, feed_forward_loop
+from clustering import clustering_coefficients, feed_forward_loop, yearly_clustering, yearly_ffl
 
 from deforestation import yearly_deforestation_in_degrees, yearly_deforestation_out_degrees
 
@@ -671,6 +671,55 @@ def plot_clustering(scenario: int, year: int, month: int) -> None:
     plt.close(fig)
 
 
+def plot_diff_yearly_clustering(scenario: int, year: int) -> None:
+    """Plot the difference (to 2030) in yearly Clustering Coefficients per node.
+
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
+
+    Returns:
+        None. Displays the plot.
+
+    """
+    filepath = "../data/water/scenario_ssp245_decade2030_month12.nc"
+    ds = xr.open_dataset(filepath)
+
+    fig, ax, kwargs = setup_amazon_map(fig_size=(12, 8))
+
+    fig.suptitle(
+        f"Network Difference of Clustering Coefficients - Year: {year}", fontsize=16
+    )
+
+    # --- Get Baseline Values for 2030 ---
+    base_in = yearly_clustering(scenario, 2030)
+
+    # --- Plot 1: In-Degrees ---
+    sc = ax.scatter(
+        x=ds["lon"],
+        y=ds["lat"],
+        c=(yearly_clustering(scenario, year) - base_in),
+        cmap="coolwarm_r",
+        s=320,
+        vmin=-1,
+        vmax=1,
+        marker="s",
+        **kwargs
+    )
+
+    fig.colorbar(sc, ax=ax, label="Difference in Clustering Coefficients", shrink=0.78)
+
+    out_dir = f"../results/plots/Clustering/Scenario{scenario}/"
+    out_path = out_dir + f"yearly_diff_clustering_{scenario}_{year}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    # plt.show()
+    plt.close(fig)
+
+
 def plot_ffl(scenario: int, year: int, month: int) -> None:
     """Plot the amount of Feed Forward Loops per node.
 
@@ -715,6 +764,55 @@ def plot_ffl(scenario: int, year: int, month: int) -> None:
 
     plt.savefig(out_path)
     plt.show()
+    plt.close(fig)
+
+
+def plot_diff_yearly_ffl(scenario: int, year: int) -> None:
+    """Plot the difference (to 2030) in yearly Feed Forward Loops per node.
+
+    Args:
+        scenario (int): The SSP scenario identifier.
+        year (int): The year to visualize.
+
+    Returns:
+        None. Displays the plot.
+
+    """
+    filepath = "../data/water/scenario_ssp245_decade2030_month12.nc"
+    ds = xr.open_dataset(filepath)
+
+    fig, ax, kwargs = setup_amazon_map(fig_size=(12, 8))
+
+    fig.suptitle(
+        f"Network Difference of Feed Forward Loops - Year: {year}", fontsize=16
+    )
+
+    # --- Get Baseline Values for 2030 ---
+    base_in = yearly_ffl(scenario, 2030)
+
+    # --- Plot 1: In-Degrees ---
+    sc = ax.scatter(
+        x=ds["lon"],
+        y=ds["lat"],
+        c=(yearly_ffl(scenario, year) - base_in),
+        cmap="coolwarm_r",
+        s=320,
+        vmin=-100,
+        vmax=100,
+        marker="s",
+        **kwargs
+    )
+
+    fig.colorbar(sc, ax=ax, label="Difference in Feed Forward Loops", shrink=0.78)
+
+    out_dir = f"../results/plots/FFL/Scenario{scenario}/"
+    out_path = out_dir + f"yearly_diff_ffl_{scenario}_{year}.png"
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(out_path)
+    # plt.show()
     plt.close(fig)
 
 
@@ -1083,4 +1181,8 @@ if __name__ == "__main__":
     # plot_all_yearly_diff_clustering(flag="Forest")
     # plot_all_yearly_diff_ffl(flag="Forest")
     # plot_deforestation(year=2002)
-    plot_MAP_with_deforestation(scenario=scenario)
+    # plot_MAP_with_deforestation(scenario=scenario)
+
+    scenario = 585
+    for year in range(2030, 2100):
+        plot_diff_yearly_ffl(scenario=scenario, year=year)
