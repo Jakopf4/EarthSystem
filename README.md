@@ -10,7 +10,7 @@ Another significant component of this study is a sensitivity analysis focused on
 
 ## Usage
 
-1. Setup \\
+1. Setup  
 First, clone the repository to your local machine:
 
     git clone https://github.com/Jakopf4/EarthSystem.git
@@ -18,14 +18,14 @@ First, clone the repository to your local machine:
 
     Data Verification: Before running scripts, ensure the data/water directory is populated with the necessary .nc (NetCDF) files.
 
-2. Choosing a Script \\
+2. Choosing a Script  
 Navigate to the scripts/ folder. Choose the script that matches your goal:
 
     anim_gen.py → Animations: Use this to generate time-lapse videos of a specific physical quantity.
 
     plot_all.py → Static Plots: Use this to generate single plots or calculated indices.
 
-3. Configuration & Execution \\
+3. Configuration & Execution  
 Currently, parameters are configured by modifying the script entry point.
 
     Open the file (anim_gen.py or plot_all.py) in your code editor.
@@ -44,7 +44,7 @@ Currently, parameters are configured by modifying the script entry point.
 
         python3 scripts/anim_gen.py
 
-4. Outputs \\
+4. Outputs  
     Visualizations: Results are saved to the results/ directory (organized by logical subfolders).
 
     Logs/Errors: Execution status and error messages will appear directly in the terminal console.
@@ -53,24 +53,24 @@ Currently, parameters are configured by modifying the script entry point.
 
 ## Project Structure
 
-├── data/ \\
-│   ├── deforestation/ \\                     
-│   │   ├── deforestation_all_BaU_...       # Deforestation maps \\
-│   │   ├── deforestation_scenario_...      # Network data including deforestation effects \\
-│   │   └── ... \\
-│   ├── water/                              # Original data \\
-│   │   ├── scenario_ssp245_... \\
-│   │   ├── scenario_ssp370_... \\            
-│   │   └── scenario_ssp585_... \\            
-│   └── dummy_scenario_ssp1...nc            # Dummy data for testing \\
-│ \\
-├── results/ \\
-│   ├── cache/                              # Intermediate computed data \\
-│   └── plots/                              # Cache of plots for animations \\
-│ \\
-├── scripts/                                # All executing functions + Testing \\
-│   ├── anim_gen.py                         \\
-│   └── ... \\
-│ \\
-├── README.md \\
-└── requirements.txt \\
+├── data/  
+│   ├── deforestation/  
+│   │   ├── deforestation_all_BaU_...       # Deforestation maps  
+│   │   ├── deforestation_scenario_...      # Network data including deforestation effects  
+│   │   └── ...  
+│   ├── water/                              # Original data  
+│   │   ├── scenario_ssp245_...  
+│   │   ├── scenario_ssp370_...  
+│   │   └── scenario_ssp585_...  
+│   └── dummy_scenario_ssp1...nc            # Dummy data for testing  
+│  
+├── results/  
+│   ├── cache/                              # Intermediate computed data  
+│   └── plots/                              # Cache of plots for animations  
+│  
+├── scripts/                                # All executing functions + Testing  
+│   ├── anim_gen.py  
+│   └── ...  
+│  
+├── README.md  
+└── requirements.txt  
