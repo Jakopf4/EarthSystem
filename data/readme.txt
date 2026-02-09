@@ -1,1 +1,3 @@
-data: Where you put raw data for your project. You usually won’t sync this to source control, unless you use very small, text-based datasets (< 10 MBs).
+data: 
+    In the subfolder water/ lies the raw data of the project, we received
+    In the subfolder deforestation/ are the deforestation maps
