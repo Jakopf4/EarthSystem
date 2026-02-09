@@ -53,24 +53,24 @@ Currently, parameters are configured by modifying the script entry point.
 
 ## Project Structure
 
-├── data/
-│   ├── deforestation/                      
-│   │   ├── deforestation_all_BaU_...       # Deforestation maps
-│   │   ├── deforestation_scenario_...      # Network data including deforestation effects
-│   │   └── ...
-│   ├── water/                              # Original data
-│   │   ├── scenario_ssp245_...            
-│   │   ├── scenario_ssp370_...             
-│   │   └── scenario_ssp585_...             
-│   └── dummy_scenario_ssp1...nc            # Dummy data for testing
-│
-├── results/
-│   ├── cache/                              # Intermediate computed data
-│   └── plots/                              # Cache of plots for animations
-│
-├── scripts/                                # All executing functions + Testing
-│   ├── anim_gen.py                         
-│   └── ...
-│
-├── README.md
-└── requirements.txt
+├── data/ \\
+│   ├── deforestation/ \\                     
+│   │   ├── deforestation_all_BaU_...       # Deforestation maps \\
+│   │   ├── deforestation_scenario_...      # Network data including deforestation effects \\
+│   │   └── ... \\
+│   ├── water/                              # Original data \\
+│   │   ├── scenario_ssp245_... \\
+│   │   ├── scenario_ssp370_... \\            
+│   │   └── scenario_ssp585_... \\            
+│   └── dummy_scenario_ssp1...nc            # Dummy data for testing \\
+│ \\
+├── results/ \\
+│   ├── cache/                              # Intermediate computed data \\
+│   └── plots/                              # Cache of plots for animations \\
+│ \\
+├── scripts/                                # All executing functions + Testing \\
+│   ├── anim_gen.py                         \\
+│   └── ... \\
+│ \\
+├── README.md \\
+└── requirements.txt \\
