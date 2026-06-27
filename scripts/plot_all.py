@@ -14,8 +14,11 @@ from inout import in_degrees, out_degrees, yearly_in_degrees, yearly_out_degrees
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.lines as mlines
 
 import numpy as np
+
+import pandas as pd
 
 import xarray as xr
 
@@ -1164,8 +1167,740 @@ def plot_dieoff(scenario: int, year: int, flag: str = "Forest") -> None:
     plt.close(fig)
 
 
+
+### PAPER PLOTS ###
+
+def plot_paper_fig1_overview(scenario: int, max_linewidth: float = 2.5) -> None:
+    """
+    Creates Figure 1 for the paper: A side-by-side comparison of the first year (2030) 
+    and the last year (2099) showing total annual precipitation (background) 
+    and averaged transport routes (arrows).
+    Both color scales and arrow thickness are globally scaled for accurate comparison.
+    """
+    year_start = 2030
+    year_end = 2099
+
+    print(f"Erstelle zweiseitigen Overview-Plot (Fig 1) für SSP{scenario} ({year_start} vs {year_end})...")
+
+    # Hilfsfunktion, um die akkumulierten Jahresdaten zu laden
+    def load_annual_data(year):
+        prec_sum = None
+        network_sum = None
+        lon = None
+        lat = None
+        
+        for m in range(1, 13):
+            filepath = f"../data/water/scenario_ssp{scenario}_decade{year}_month{m:02d}.nc"
+            with xr.open_dataset(filepath) as ds:
+                if m == 1:
+                    prec_sum = ds["prec"].values.copy()
+                    network_sum = ds["network"].values.copy()
+                    lon = ds["lon"].values
+                    lat = ds["lat"].values
+                else:
+                    prec_sum += ds["prec"].values
+                    network_sum += ds["network"].values
+                    
+        # Gibt die Summe des Niederschlags und das gemittelte Netzwerk des Jahres zurück
+        return prec_sum, network_sum / 12.0, lon, lat
+
+    # 1. Daten für beide Jahre laden
+    prec_start, network_start, lon_np, lat_np = load_annual_data(year_start)
+    prec_end, network_end, _, _ = load_annual_data(year_end)
+
+    # 2. Globale Max-Werte bestimmen (für konsistente Farbskalen UND Pfeildicken)
+    global_vmax_prec = max(np.percentile(prec_start, 90), np.percentile(prec_end, 90))
+    global_max_weight = max(np.max(network_start), np.max(network_end))
+
+    # 3. Double-Map Setup aufrufen
+    fig, ax1, ax2, kwargs = setup_double_amazon_map(fig_size=(22, 8))
+    fig.suptitle(f"Amazon Moisture Recycling Network & Annual Precipitation - SSP {scenario}", 
+                 fontsize=16, fontweight="bold", y=0.98)
+
+    # Listen für die iterative Bearbeitung beider Subplots
+    years = [year_start, year_end]
+    axes = [ax1, ax2]
+    prec_data = [prec_start, prec_end]
+    network_data = [network_start, network_end]
+
+    for ax, year, prec_vals, net_vals in zip(axes, years, prec_data, network_data):
+        
+        # 4. Hintergrund plotten (Gesamter Jahresniederschlag)
+        sc = ax.scatter(
+            x=lon_np,
+            y=lat_np,
+            c=prec_vals,
+            cmap="Blues",
+            s=300,
+            marker="s",
+            vmin=0,
+            #vmax=global_vmax_prec
+            vmax=2000, # Einheitliche für alle Szenarios
+            alpha=0.8,
+            **kwargs
+        )
+        
+        # Colorbar für jedes Subplot
+        cbar = fig.colorbar(sc, ax=ax, shrink=0.78, pad=0.02)
+        cbar.set_label("Annual Precipitation [mm/year]", fontsize=12)
+
+        # 5. Verbindungen filtern
+        i_indices, j_indices = np.where(net_vals > CONNECTION_THRESHOLD)
+
+        print(f" -> Jahr {year}: {len(i_indices)} Pfeile über dem Threshold ({CONNECTION_THRESHOLD}) gefunden.")
+
+        # 6. Pfeile in das jeweilige Subplot einzeichnen
+        if len(i_indices) > 0:
+            for i, j in zip(i_indices, j_indices):
+                if i == j: # Selbstverbindungen ignorieren
+                    continue
+
+                start_point = (lon_np[j], lat_np[j])
+                end_point = (lon_np[i], lat_np[i])
+                weight = net_vals[i, j]
+
+                # Skalierung von Dicke und Transparenz basierend auf dem GLOBALEN Maximum
+                lw = max(0.2, (weight / global_max_weight) * max_linewidth)
+                alpha_val = max(0.2, min(0.9, weight / global_max_weight * 1.5))
+
+                ax.annotate(
+                    "",
+                    xy=end_point,
+                    xytext=start_point,
+                    arrowprops=dict(
+                        arrowstyle="-|>",
+                        color="#D30808", # Dein gewünschtes Rot
+                        linewidth=lw,
+                        alpha=alpha_val
+                    ),
+                    **kwargs
+                )
+        
+        # --- NEU: 6.5 Custom Legend für die Pfeile ---
+        # Wir erstellen einen Dummy-Pfeil für die Legende
+        arrow_legend = mlines.Line2D([], [], color='#D30808', marker='>',
+                                     markersize=8, label='Atmospheric Water Transport', 
+                                     linewidth=2)
+        # Unten links ist bei Südamerika-Karten meistens der Pazifik (viel leerer Platz)
+        ax.legend(handles=[arrow_legend], loc="lower left", fontsize=11, framealpha=0.9)
+        # ---------------------------------------------
+
+        # Subplot-Beschriftung
+        ax.set_title(f"Year: {year} (Annual Total)", fontsize=14, fontweight="bold")
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+        ax.grid(True, linestyle="--", alpha=0.4)
+
+    # 7. Speichern & Schließen
+    out_dir = "../results/plots/Paper_Plots/"
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, f"Fig1_Overview_Network_Comparison_{scenario}.png")
+    
+    plt.savefig(out_path)
+    print(f"Vergleichsplot erfolgreich gespeichert unter: {out_path}")
+    plt.close(fig)
+
+def plot_paper_fig2_clustering_series() -> None:
+    """
+    Creates a side-by-side plot for the paper:
+    Left: Clustering Difference [%] vs. Year
+    Right: Clustering Difference [%] vs. Temperature Anomaly [°C]
+    
+    Reads temperature data from CSV files (Mean variable, already relative to 1850-1900).
+    """
+    scenarios = [245, 370, 585] 
+    years_to_scan = range(2030, 2100, 1)
+    colors = ["#ff9900", "#ff0000", "#8400ff"]
+
+    print("\n--- STARTE DOPPEL-PLOT ANALYSE (CSV) ---")
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), dpi=150)
+    
+    ax1.set_xlim(2030, 2100)
+
+    for idx, scenario in enumerate(scenarios):
+        scenario_color = colors[idx]
+        print(f"\nVerarbeite Szenario SSP{scenario}:")
+
+        # ========================================================
+        # 1. TEMPERATURDATEN AUS .CSV DATEI LADEN
+        # ========================================================
+        # Dateinamen-Formatierung: Aus 245 wird "2_4_5"
+        scen_str = str(scenario)
+        scen_formatted = f"{scen_str[0]}_{scen_str[1]}_{scen_str[2]}"
+        
+        temp_file = f"../data/IPCC_Temperatures/tas_global_SSP{scen_formatted}.csv"
+        temp_dict = {} 
+        
+        if os.path.exists(temp_file):
+            try:
+                # CSV mit Pandas einlesen
+                df = pd.read_csv(temp_file)
+                
+                # Dictionary befüllen
+                for _, row in df.iterrows():
+                    # Das Jahr aus der CSV (z.B. 2015.0) in einen sauberen Integer umwandeln
+                    y_int = int(float(row['Year']))
+                    
+                    if y_int in years_to_scan:
+                        # Wir nutzen die Spalte "Mean". 
+                        temp_dict[y_int] = float(row['Mean'])
+                        
+                print(f" -> {len(temp_dict)} Temperatur-Werte aus CSV extrahiert.")
+            except Exception as e:
+                print(f" -> FEHLER beim Lesen der CSV-Datei: {e}")
+        else:
+            print(f" -> FEHLER: Temperaturdatei nicht gefunden: {temp_file}")
+
+        # ========================================================
+        # 2. NETZWERK-DATEN ÜBER DEINE FUNKTION LADEN/BERECHNEN
+        # ========================================================
+        try:
+            base_values = yearly_clustering(scenario, 2030)
+        except Exception as e:
+            print(f" -> ÜBERSPRINGE SZENARIO: Konnte Baseline (2030) nicht berechnen. Fehler: {e}")
+            continue
+
+        plot_years = []
+        diff_values = []
+        plot_temps = []
+
+        for year in years_to_scan:
+            try:
+                curr_values = yearly_clustering(scenario, year)
+                
+                # Clustering Differenz in % berechnen
+                diff = np.nanmean(curr_values - base_values)
+                diff_perc = (diff / np.nanmean(base_values)) * 100
+
+                temp_val = temp_dict.get(year, np.nan)
+
+                plot_years.append(year)
+                diff_values.append(diff_perc)
+                plot_temps.append(temp_val)
+            except Exception as e:
+                pass
+
+        print(f" -> {len(plot_years)} Jahre mit Netzwerk-Daten für den Plot verarbeitet.")
+
+        # ========================================================
+        # 3. ZEICHNEN DER PLOTS
+        # ========================================================
+        
+        # --- Links Plotten (Gegen die Zeit) ---
+        if len(plot_years) > 0:
+            ax1.plot(
+                plot_years, diff_values, label=f"SSP {scenario}",
+                color=scenario_color, linestyle="-", linewidth=2.5, alpha=0.9
+            )
+
+        # --- Rechts Plotten (Gegen die Temperatur) ---
+        valid_indices = [i for i, t in enumerate(plot_temps) if not np.isnan(t)]
+        
+        if len(valid_indices) > 0:
+            valid_temps = np.array(plot_temps)[valid_indices]
+            valid_diffs = np.array(diff_values)[valid_indices]
+            
+            # Da die Daten bereits gemittelt sind, plotten wir sie direkt dick und ohne Marker
+            ax2.plot(
+                valid_temps, valid_diffs,
+                color=scenario_color, linestyle="-", linewidth=2.5, marker="", alpha=0.9
+            )
+
+    # ========================================================
+    # 4. KOSMETIK UND SPEICHERN
+    # ========================================================
+    
+    # --- Achse 1 (Zeit) ---
+    ax1.set_title("Temporal Dynamics", fontsize=14, fontweight="bold", pad=15)
+    ax1.set_xlabel("Year", fontsize=12)
+    ax1.set_ylabel("Clustering Coefficient Difference\n(relative to 2030) [%]", fontsize=12)
+    ax1.set_xticks(range(2030, 2101, 10))
+    ax1.axhline(0, color="black", linewidth=1, linestyle="-", alpha=0.3)
+    ax1.grid(True, linestyle="--", alpha=0.5)
+    ax1.spines["top"].set_visible(False)
+    ax1.spines["right"].set_visible(False)
+    ax1.legend(loc="lower left", frameon=True)
+
+    # --- Achse 2 (Temperatur) ---
+    ax2.set_title("Temperature Dependence", fontsize=14, fontweight="bold", pad=15)
+    ax2.set_xlabel("Global Warming Level (°C relative to 1850-1900)", fontsize=12)
+    ax2.set_xlim(left=1.4, right=5.2) 
+    
+    ax2.sharey(ax1)
+    ax2.axhline(0, color="black", linewidth=1, linestyle="-", alpha=0.3)
+    ax2.grid(True, linestyle="--", alpha=0.5)
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["right"].set_visible(False)
+
+    fig.suptitle("Network Clustering Coefficient", fontsize=16, fontweight="bold", y=1.05)
+    plt.tight_layout()
+
+    out_dir = "../results/plots/Paper_Plots/"
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "Fig2_Clustering.png")
+    
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    print(f"\nPlot gespeichert unter: {out_path}")
+    
+    plt.close(fig)
+
+def plot_paper_fig2_clustering_map(scenario: int) -> None:
+    """
+    Creates Figure 2 for the paper: A side-by-side spatial map comparison 
+    of the Clustering Coefficient between 2030 and 2099 for a given scenario.
+    Uses a global color scale across both maps for accurate scientific comparison.
+    
+    Args:
+        scenario (int): The SSP scenario to plot (e.g., 245, 370, 585).
+    """
+    year_start = 2030
+    year_end = 2099
+    
+    print(f"\nErstelle räumlichen Clustering-Vergleichsplot für SSP{scenario} ({year_start} vs {year_end})...")
+
+    # ========================================================
+    # 1. GEO-KOORDINATEN LADEN
+    # ========================================================
+    coord_file = f"../data/water/scenario_ssp{scenario}_decade{year_start}_month01.nc"
+        
+    try:
+        with xr.open_dataset(coord_file) as ds_coord:
+            lon_np = ds_coord["lon"].values
+            lat_np = ds_coord["lat"].values
+    except Exception as e:
+        print(f" -> FEHLER beim Laden der Geokoordinaten aus {coord_file}: {e}")
+        return
+
+    # ========================================================
+    # 2. CLUSTERING-DATEN LADEN/BERECHNEN
+    # ========================================================
+    try:
+        data_start = yearly_clustering(scenario, year_start)
+        data_end = yearly_clustering(scenario, year_end)
+    except Exception as e:
+        print(f" -> FEHLER beim Berechnen der Clustering-Werte: {e}")
+        return
+
+    # ========================================================
+    # 3. FARBSKALA (GLOBAL) DEFINIEREN
+    # ========================================================
+    # Wir cappen beim 98. Perzentil, damit einzelne Extremwerte den Plot nicht blass machen
+    global_vmax = max(np.percentile(data_start, 98), np.percentile(data_end, 98))
+    global_vmin = min(np.nanmin(data_start), np.nanmin(data_end))
+    
+    # Optional: Wenn Clustering sowieso bei 0 startet, ist eine harte 0 oft besser fürs Paper
+    global_vmin = max(0, global_vmin) 
+
+    # ========================================================
+    # 4. KARTEN SETUP & PLOTTEN
+    # ========================================================
+    fig, ax1, ax2, kwargs = setup_double_amazon_map(fig_size=(22, 8))
+    fig.suptitle(f"Spatial Degradation: Local Clustering Coefficient (SSP {scenario})", 
+                 fontsize=16, fontweight="bold", y=0.98)
+
+    axes = [ax1, ax2]
+    years = [year_start, year_end]
+    datasets = [data_start, data_end]
+
+    for ax, year, data_vals in zip(axes, years, datasets):
+        
+        # Räumliche Zellen plotten
+        sc = ax.scatter(
+            x=lon_np,
+            y=lat_np,
+            c=data_vals,
+            cmap="Greens", # Wissenschaftlich hervorragend lesbar für Netzwerkdichten
+            s=300,         # Kästchengröße, ggf. anpassen
+            marker="s",
+            #vmin=global_vmin,
+            #vmax=global_vmax,
+            vmin=0,
+            vmax=1,
+            alpha=0.9,
+            **kwargs
+        )
+        
+        # Colorbar für jedes Subplot
+        cbar = fig.colorbar(sc, ax=ax, shrink=0.78, pad=0.02)
+        cbar.set_label("Local Clustering Coefficient", fontsize=12)
+
+        # Beschriftung und Kosmetik
+        ax.set_title(f"Year: {year}", fontsize=14, fontweight="bold")
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+        ax.grid(True, linestyle="--", alpha=0.4)
+
+    # ========================================================
+    # 5. SPEICHERN
+    # ========================================================
+    out_dir = "../results/plots/Paper_Plots/"
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, f"Fig2_Clustering_Map_{scenario}.png")
+    
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    print(f"Räumlicher Vergleichsplot erfolgreich gespeichert unter: {out_path}")
+    
+    plt.close(fig)
+
+def plot_paper_fig3_ffl_series() -> None:
+    """
+    Creates Figure 3 for the paper:
+    Left: Feed-Forward Loop Difference [%] vs. Year
+    Right: Feed-Forward Loop Difference [%] vs. Temperature Anomaly [°C]
+    
+    Reads temperature data from CSV files (Mean variable, already relative to 1850-1900).
+    """
+    scenarios = [245, 370, 585] 
+    years_to_scan = range(2030, 2100, 1)
+    colors = ["#ff9900", "#ff0000", "#8400ff"]
+
+    print("\n--- STARTE DOPPEL-PLOT ANALYSE: FEED-FORWARD LOOPS ---")
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), dpi=150)
+    
+    ax1.set_xlim(2030, 2100)
+
+    for idx, scenario in enumerate(scenarios):
+        scenario_color = colors[idx]
+        print(f"\nVerarbeite Szenario SSP{scenario}:")
+
+        # ========================================================
+        # 1. TEMPERATURDATEN AUS .CSV DATEI LADEN
+        # ========================================================
+        scen_str = str(scenario)
+        scen_formatted = f"{scen_str[0]}_{scen_str[1]}_{scen_str[2]}"
+        
+        temp_file = f"../data/IPCC_Temperatures/tas_global_SSP{scen_formatted}.csv"
+        temp_dict = {} 
+        
+        if os.path.exists(temp_file):
+            try:
+                df = pd.read_csv(temp_file)
+                for _, row in df.iterrows():
+                    y_int = int(float(row['Year']))
+                    if y_int in years_to_scan:
+                        temp_dict[y_int] = float(row['Mean'])
+                        
+                print(f" -> {len(temp_dict)} Temperatur-Werte aus CSV extrahiert.")
+            except Exception as e:
+                print(f" -> FEHLER beim Lesen der CSV-Datei: {e}")
+        else:
+            print(f" -> FEHLER: Temperaturdatei nicht gefunden: {temp_file}")
+
+        # ========================================================
+        # 2. NETZWERK-DATEN (FFL) BERECHNEN/LADEN
+        # ========================================================
+        try:
+            # Nutzt nun yearly_ffl statt yearly_clustering
+            base_values = yearly_ffl(scenario, 2030)
+        except Exception as e:
+            print(f" -> ÜBERSPRINGE SZENARIO: Konnte Baseline (2030) nicht berechnen. Fehler: {e}")
+            continue
+
+        plot_years = []
+        diff_values = []
+        plot_temps = []
+
+        # Sicherheitscheck, falls die Base-Values 0 sein sollten (vermeidet Division by Zero)
+        mean_base = np.nanmean(base_values)
+        if mean_base == 0:
+            print(f" -> WARNUNG: Mittlere FFL Baseline ist 0. Überspringe Prozentrechnung für SSP{scenario}.")
+            continue
+
+        for year in years_to_scan:
+            try:
+                curr_values = yearly_ffl(scenario, year)
+                
+                # FFL Differenz in % berechnen
+                diff = np.nanmean(curr_values - base_values)
+                diff_perc = (diff / mean_base) * 100
+
+                temp_val = temp_dict.get(year, np.nan)
+
+                plot_years.append(year)
+                diff_values.append(diff_perc)
+                plot_temps.append(temp_val)
+            except Exception as e:
+                pass
+
+        print(f" -> {len(plot_years)} Jahre mit FFL-Daten für den Plot verarbeitet.")
+
+        # ========================================================
+        # 3. ZEICHNEN DER PLOTS
+        # ========================================================
+        
+        # --- Links Plotten (Gegen die Zeit) ---
+        if len(plot_years) > 0:
+            ax1.plot(
+                plot_years, diff_values, label=f"SSP {scenario}",
+                color=scenario_color, linestyle="-", linewidth=2.5, alpha=0.9
+            )
+
+        # --- Rechts Plotten (Gegen die Temperatur) ---
+        valid_indices = [i for i, t in enumerate(plot_temps) if not np.isnan(t)]
+        
+        if len(valid_indices) > 0:
+            valid_temps = np.array(plot_temps)[valid_indices]
+            valid_diffs = np.array(diff_values)[valid_indices]
+            
+            ax2.plot(
+                valid_temps, valid_diffs,
+                color=scenario_color, linestyle="-", linewidth=2.5, marker="", alpha=0.9
+            )
+
+    # ========================================================
+    # 4. KOSMETIK UND SPEICHERN
+    # ========================================================
+    
+    # --- Achse 1 (Zeit) ---
+    ax1.set_title("Temporal Dynamics", fontsize=14, fontweight="bold", pad=15)
+    ax1.set_xlabel("Year", fontsize=12)
+    # Angepasstes Y-Label für FFL
+    ax1.set_ylabel("Feed-Forward Loops Difference\n(relative to 2030) [%]", fontsize=12)
+    ax1.set_xticks(range(2030, 2101, 10))
+    ax1.axhline(0, color="black", linewidth=1, linestyle="-", alpha=0.3)
+    ax1.grid(True, linestyle="--", alpha=0.5)
+    ax1.spines["top"].set_visible(False)
+    ax1.spines["right"].set_visible(False)
+    ax1.legend(loc="lower left", frameon=True)
+
+    # --- Achse 2 (Temperatur) ---
+    ax2.set_title("Temperature Dependence", fontsize=14, fontweight="bold", pad=15)
+    ax2.set_xlabel("Global Warming Level (°C relative to 1850-1900)", fontsize=12)
+    ax2.set_xlim(left=1.4, right=5.2)
+    
+    ax2.sharey(ax1)
+    ax2.axhline(0, color="black", linewidth=1, linestyle="-", alpha=0.3)
+    ax2.grid(True, linestyle="--", alpha=0.5)
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["right"].set_visible(False)
+
+    # Angepasster Main Title
+    fig.suptitle("Network Feed-Forward Loops", fontsize=16, fontweight="bold", y=1.05)
+    plt.tight_layout()
+
+    out_dir = "../results/plots/Paper_Plots/"
+    os.makedirs(out_dir, exist_ok=True)
+    # Angepasster Dateiname
+    out_path = os.path.join(out_dir, "Fig2_FFL.png")
+    
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    print(f"\nPlot gespeichert unter: {out_path}")
+    
+    plt.close(fig)
+
+def plot_paper_fig3_ffl_map(scenario: int) -> None:
+    """
+    Creates Figure 3 for the paper: A side-by-side spatial map comparison 
+    of the Feed-Forward Loops between 2030 and 2099 for a given scenario.
+    Uses a global color scale across both maps for accurate scientific comparison.
+    
+    Args:
+        scenario (int): The SSP scenario to plot (e.g., 245, 370, 585).
+    """
+    year_start = 2030
+    year_end = 2099
+    
+    print(f"\nErstelle räumlichen FFL-Vergleichsplot für SSP{scenario} ({year_start} vs {year_end})...")
+
+    # ========================================================
+    # 1. GEO-KOORDINATEN LADEN
+    # ========================================================
+    coord_file = f"../data/water/scenario_ssp{scenario}_decade{year_start}_month01.nc"
+        
+    try:
+        with xr.open_dataset(coord_file) as ds_coord:
+            lon_np = ds_coord["lon"].values
+            lat_np = ds_coord["lat"].values
+    except Exception as e:
+        print(f" -> FEHLER beim Laden der Geokoordinaten aus {coord_file}: {e}")
+        return
+
+    # ========================================================
+    # 2. FFL-DATEN LADEN/BERECHNEN
+    # ========================================================
+    try:
+        data_start = yearly_ffl(scenario, year_start)
+        data_end = yearly_ffl(scenario, year_end)
+    except Exception as e:
+        print(f" -> FEHLER beim Berechnen der FFL-Werte: {e}")
+        return
+
+    # ========================================================
+    # 3. FARBSKALA (GLOBAL) DEFINIEREN
+    # ========================================================
+    # Da FFLs absolute Zahlen (Counts) sind, MÜSSEN wir das Maximum dynamisch berechnen!
+    # Wir cappen beim 98. Perzentil, damit einzelne Extremwerte den Plot nicht blass machen
+    global_vmax = max(np.percentile(data_start, 98), np.percentile(data_end, 98))
+    
+    # Da die Anzahl der Loops nicht negativ sein kann, setzen wir vmin hart auf 0
+    global_vmin = 0 
+
+    # ========================================================
+    # 4. KARTEN SETUP & PLOTTEN
+    # ========================================================
+    fig, ax1, ax2, kwargs = setup_double_amazon_map(fig_size=(22, 8))
+    fig.suptitle(f"Spatial Degradation: Feed-Forward Loops (SSP {scenario})", 
+                 fontsize=16, fontweight="bold", y=0.98)
+
+    axes = [ax1, ax2]
+    years = [year_start, year_end]
+    datasets = [data_start, data_end]
+
+    for ax, year, data_vals in zip(axes, years, datasets):
+        
+        # Räumliche Zellen plotten
+        sc = ax.scatter(
+            x=lon_np,
+            y=lat_np,
+            c=data_vals,
+            cmap="Greens", # Du kannst hier auch z.B. "Oranges" oder "Purples" nehmen, um es vom Clustering abzuheben
+            s=300,         # Kästchengröße
+            marker="s",
+            #vmin=global_vmin,
+            #vmax=global_vmax, # Dynamisches Maximum für FFLs!
+            vmin=0,
+            vmax=120,
+            alpha=0.9,
+            **kwargs
+        )
+        
+        # Colorbar für jedes Subplot
+        cbar = fig.colorbar(sc, ax=ax, shrink=0.78, pad=0.02)
+        cbar.set_label("Number of Feed-Forward Loops", fontsize=12)
+
+        # Beschriftung und Kosmetik
+        ax.set_title(f"Year: {year}", fontsize=14, fontweight="bold")
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+        ax.grid(True, linestyle="--", alpha=0.4)
+
+    # ========================================================
+    # 5. SPEICHERN
+    # ========================================================
+    out_dir = "../results/plots/Paper_Plots/"
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, f"Fig3_FFL_Map_{scenario}.png")
+    
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    print(f"Räumlicher Vergleichsplot erfolgreich gespeichert unter: {out_path}")
+    
+    plt.close(fig)
+
+def plot_MAP_comparison_secondary_veg() -> None:
+    """
+    Berechnet den Jahresniederschlag direkt aus den monatlichen NetCDF-Dateien 
+    und speichert den Time-Series Plot als PNG-Datei für das Paper.
+    Der Entwaldungseffekt wird dynamisch aus der Differenz der 'network'-Matrizen berechnet.
+    """
+    # =====================================================================
+    # KONFIGURATION
+    # =====================================================================
+    scenarios = [245, 370, 585]
+    years = np.arange(2030, 2051)
+    
+    base_dir = "../data/water/"
+    sec_dir = "../data/water_secondary_vegetation/"
+    out_dir = "../results/plots/Paper_Plots/"
+    
+    # Farben exakt wie in der Bildvorlage
+    colors = {
+        245: "#f5a623", # Orange/Gold
+        370: "#d0021b", # Rot
+        585: "#9013fe"  # Lila
+    }
+    
+    print("\n--- Starte MAP Vergleichs-Plot (Speichermodus) ---")
+    print("Berechne Daten und speichere Plot...")
+    
+    fig, ax = plt.subplots(figsize=(11, 7), dpi=150)
+    
+    # =====================================================================
+    # DATENVERARBEITUNG & PLOTTING
+    # =====================================================================
+    for ssp in scenarios:
+        print(f"Verarbeite SSP{ssp}...")
+        
+        map_baseline = []
+        map_sec_veg = []
+        
+        for year in years:
+            annual_prec_base = 0.0
+            annual_prec_sec = 0.0
+            valid_months = 0
+            
+            for month in range(1, 13):
+                filename = f"scenario_ssp{ssp}_decade{year}_month{month:02d}.nc"
+                filepath_base = os.path.join(base_dir, filename)
+                filepath_sec = os.path.join(sec_dir, filename)
+                
+                if not os.path.exists(filepath_base) or not os.path.exists(filepath_sec):
+                    continue
+                    
+                try:
+                    with xr.open_dataset(filepath_base) as ds_base, xr.open_dataset(filepath_sec) as ds_sec:
+                        # 1. Basis-Niederschlag (CMIP6 Forcing)
+                        mean_prec_base = float(ds_base["prec"].mean(skipna=True))
+                        
+                        # 2. Feuchtigkeitsflüsse analysieren
+                        rec_prec_base = ds_base["network"].sum(dim="x")
+                        rec_prec_sec = ds_sec["network"].sum(dim="x")
+                        
+                        # 3. Differenz berechnen (Delta P)
+                        delta_prec = float((rec_prec_sec - rec_prec_base).mean(skipna=True))
+                        
+                        # 4. Korrektur
+                        mean_prec_sec = mean_prec_base + delta_prec
+                        
+                        annual_prec_base += mean_prec_base
+                        annual_prec_sec += mean_prec_sec
+                        valid_months += 1
+                        
+                except Exception as e:
+                    print(f"  -> FEHLER bei {filename}: {e}")
+                    continue
+            
+            print(f"  -> Jahr {year}  {mean_prec_base - mean_prec_sec:.2f} mm")
+
+            if valid_months == 12:
+                map_baseline.append(annual_prec_base)
+                map_sec_veg.append(annual_prec_sec)
+            else:
+                map_baseline.append(np.nan)
+                map_sec_veg.append(np.nan)
+                
+        # Plotting der Linien
+        ax.plot(years, map_baseline, color=colors[ssp], linestyle="-", linewidth=2, label=f"No Deforestation - SSP{ssp}")
+        ax.plot(years, map_sec_veg, color=colors[ssp], linestyle=":", linewidth=2.5, label=f"With Deforestation - SSP{ssp}")
+
+    # =====================================================================
+    # KOSMETIK & SPEICHERN
+    # =====================================================================
+    ax.axhline(y=1800, color="#b8b28f", linestyle="--", linewidth=2.5, label="Bistable Threshold (1800 mm)")
+    ax.set_title("Mean Annual Precipitation Comparison with Deforestation", fontsize=15, fontweight="bold", pad=20)
+    ax.set_xlabel("Year", fontsize=12)
+    ax.set_ylabel("Mean Annual Precipitation [mm]", fontsize=12)
+    ax.set_xlim(2029, 2051)
+    ax.set_ylim(1500, 2000) 
+    ax.set_xticks(np.arange(2030, 2051, 5))
+    ax.grid(True, linestyle="--", alpha=0.5, color="lightgray")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.legend(loc="lower left", frameon=True, fontsize=10)
+    
+    # Speichern
+    os.makedirs(out_dir, exist_ok=True)
+    save_path = os.path.join(out_dir, "MAP_Comparison_SecVeg.png")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+    plt.close(fig)
+    print(f"Plot erfolgreich gespeichert unter: {save_path}")
+
+
+
 if __name__ == "__main__":
-    scenario = 585
+    scenario = 245
     year = 2050
     month = 1
 
@@ -1182,7 +1917,14 @@ if __name__ == "__main__":
     # plot_all_yearly_diff_ffl(flag="Forest")
     # plot_deforestation(year=2002)
     # plot_MAP_with_deforestation(scenario=scenario)
+    # plot_paper_fig1_overview(scenario=scenario)
+    # plot_paper_fig2_clustering_series()
+    # plot_paper_fig2_clustering_map(scenario=scenario)
+    # plot_paper_fig3_ffl_series()
+    # plot_paper_fig3_ffl_map(scenario=scenario)
+    plot_MAP_comparison_secondary_veg()
+    
 
-    scenario = 585
-    for year in range(2030, 2051):
-        plot_dieoff(scenario=scenario, year=year, flag="Deforest")
+    #scenario = 585
+    #for year in range(2030, 2051):
+        #plot_dieoff(scenario=scenario, year=year, flag="Deforest")
