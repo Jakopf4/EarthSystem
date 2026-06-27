@@ -1,0 +1,1 @@
+# Jährliche Mittelung/Summation der Daten und in einer File jeweils speichern?
