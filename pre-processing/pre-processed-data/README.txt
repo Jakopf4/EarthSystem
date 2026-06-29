@@ -1,1 +1,0 @@
-# Hier einfügen, dass gitignore hier funktioniert
