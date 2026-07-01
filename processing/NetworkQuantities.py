@@ -58,6 +58,12 @@ def calculate_network_metrics(scenario: int, year: int, month: int, thresholds: 
     ds = xr.open_dataset(nc_filepath)
     matrix = ds["network"].values
 
+    lat_values = ds["lat"].values
+    lon_values = ds["lon"].values
+
+    prec_values = ds["prec"].values
+    evap_values = ds["evap"].values
+
     # Eine leere Liste, um die Teilergebnisse zu sammeln
     all_threshold_data = []
 
@@ -70,17 +76,21 @@ def calculate_network_metrics(scenario: int, year: int, month: int, thresholds: 
         in_degrees = dict(G.in_degree())
         out_degrees = dict(G.out_degree())
         clustering_coeffs = nx.clustering(G)
-        
+
         # --- NEU: Feed-Forward-Loops berechnen ---
         ffl_counts = count_ffls_per_node(G)
 
         # DataFrame für DIESEN Threshold erstellen
         df_metrics = pd.DataFrame({
+            "lat": lat_values,
+            "lon": lon_values,
             "threshold": threshold,
-            "in_degree": in_degrees,
-            "out_degree": out_degrees,
-            "clustering": clustering_coeffs,
-            "ffl": ffl_counts  # --- NEU: Spalte aktivieren ---
+            "prec": prec_values,
+            "evap": evap_values,
+            "in_degree": pd.Series(in_degrees),
+            "out_degree": pd.Series(out_degrees),
+            "clustering": pd.Series(clustering_coeffs),
+            "ffl": pd.Series(ffl_counts)
         })
 
         # DataFrame in unsere Liste packen, NICHT speichern!
@@ -112,7 +122,7 @@ def calculate_yearly_network_metrics(scenario: int, year: int, thresholds: list,
     """Liest die 12 monatlichen Master-CSVs ein, berechnet den Jahresdurchschnitt 
     der Metriken und speichert das Ergebnis in einer neuen CSV-Datei.
     """
-    
+
     # Eine leere Liste, um die DataFrames der 12 Monate zu sammeln
     all_months_data = []
 
@@ -414,6 +424,7 @@ def execute_timeseries_creation():
 
 
 if __name__ == "__main__":
-    # execute_network_metrics()
-    # execute_yearly_network_metrics()
+    execute_network_metrics()
+    execute_yearly_network_metrics()
     execute_timeseries_creation()
+    a = 3
