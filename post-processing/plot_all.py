@@ -1,1 +1,0 @@
-# Können auch verschiedene Files werden, aber alle plot/video Funktionen
