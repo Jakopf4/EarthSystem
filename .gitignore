@@ -128,6 +128,17 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-data/
+# Ignoriere alles im neuen Daten-Ordner...
+1-data/*
+
+# ...ABER ignoriere nicht die .gitkeep Datei!
+!1-data/.gitkeep
+
+# Ignoriere alle Daten im pre-processed Ordner
+2-pre-processing/pre-processed-data/*
+
+# ...ABER erlaube alle .gitkeep Dateien (auch in Unterordnern wie water_BaU)
+!2-pre-processing/pre-processed-data/**/.gitkeep
+
 results/cache/
 results/plots
