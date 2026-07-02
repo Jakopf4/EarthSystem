@@ -360,8 +360,8 @@ def execute_network_metrics():
     years_raw = range(2030, 2100)
     years_def = range(2030, 2051)
     months = range(1, 13)
-    # thresholds = [0.2367, 1.1514, 3.112]
-    thresholds = [1.1514, 3.112]
+    thresholds = [0.2367, 1.1514, 3.112]
+    # thresholds = [1.1514, 3.112]
 
     for scenario in scenarios:
         for year in years_raw:
