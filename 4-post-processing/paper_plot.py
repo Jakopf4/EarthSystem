@@ -2,6 +2,8 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.colors as mcolors
 
 def plot_MAP_from_csv(threshold_val: float = 1.14, scenario_1: str = "Raw", scenario_2: str = "Sec") -> None:
     """
@@ -479,6 +481,178 @@ def plot_Clustering_relative_comparison(threshold_val: float = 1.14, scenario_1:
     print(f"Plot erfolgreich gespeichert unter: {save_path}\n")
 
 
+def plot_combined_precipitation_loss_from_csv(scenario_1: str = "Raw", scenario_2: str = "BaU", metric_threshold: float = 1.1514) -> None:
+    """
+    Analysiert den >25% Niederschlagsverlust (Time of Emergence) 
+    direkt aus den vorberechneten CSV-Dateien (Pandas).
+    """
+    scenarios = [245, 370, 585]
+    years_future = np.arange(2030, 2100) # Passe das an dein gewünschtes Endjahr an
+    
+    # Pfade an deine Ordnerstruktur anpassen
+    hist_file = "../3-processing/processed-data/timeseries_historical/historical_spatial_average_per_cell.csv"
+    data_dir = "../3-processing/processed-data/"
+    out_dir = "../4-post-processing/Plots/"
+    
+    print("\n--- SCHRITT 1: Historische Basislinie aus CSV laden ---")
+    if not os.path.exists(hist_file):
+        print(f"FEHLER: Historische CSV nicht gefunden unter: {hist_file}")
+        return
+        
+    df_hist = pd.read_csv(hist_file)
+    # Koordinaten runden für sauberen Merge
+    df_hist['lat_round'] = df_hist['lat'].round(4)
+    df_hist['lon_round'] = df_hist['lon'].round(4)
+    
+    # Wir brauchen nur die Koordinaten und den Threshold
+    df_hist['threshold_prec'] = df_hist['mean_annual_prec'] * 0.75 
+    
+    print("\n--- SCHRITT 2: Zukunftsdaten (CSVs) vergleichen ---")
+    
+    pct_base = {ssp: [] for ssp in scenarios}
+    pct_sec = {ssp: [] for ssp in scenarios}
+    
+    num_cells = len(df_hist)
+    toe_base = {ssp: np.full(num_cells, 9999) for ssp in scenarios}
+    toe_sec = {ssp: np.full(num_cells, 9999) for ssp in scenarios}
+    
+    # Wir speichern uns die exakten lats/lons für den Plot in der gleichen Reihenfolge wie in df_hist
+    plot_lats = df_hist['lat'].values
+    plot_lons = df_hist['lon'].values
+
+    for ssp in scenarios:
+        print(f"  -> Berechne SSP{ssp} ({scenario_1} vs {scenario_2})...")
+        
+        for y in years_future:
+            f_base = os.path.join(data_dir, f"metrics_{scenario_1}", f"network_metrics_ssp{ssp}_decade{y}_{scenario_1}.csv")
+            f_sec = os.path.join(data_dir, f"metrics_{scenario_2}", f"network_metrics_ssp{ssp}_decade{y}_{scenario_2}.csv")
+            
+            if os.path.exists(f_base) and os.path.exists(f_sec):
+                # Zukunftsdaten laden
+                df_b = pd.read_csv(f_base)
+                df_s = pd.read_csv(f_sec)
+                
+                # Wir filtern nach einem Threshold, damit wir jede Zelle nur 1x pro Jahr haben
+                # (Die 'prec' Spalte ist für alle Thresholds derselben Zelle identisch)
+                df_b = df_b[np.isclose(df_b['threshold'], metric_threshold, atol=0.01)].copy()
+                df_s = df_s[np.isclose(df_s['threshold'], metric_threshold, atol=0.01)].copy()
+                
+                df_b['lat_round'] = df_b['lat'].round(4)
+                df_b['lon_round'] = df_b['lon'].round(4)
+                df_s['lat_round'] = df_s['lat'].round(4)
+                df_s['lon_round'] = df_s['lon'].round(4)
+                
+                # Merge mit der historischen Tabelle, um die Reihenfolge perfekt abzugleichen
+                merged_b = pd.merge(df_hist, df_b, on=['lat_round', 'lon_round'], how='left')
+                merged_s = pd.merge(df_hist, df_s, on=['lat_round', 'lon_round'], how='left')
+                
+                p_base = merged_b['prec'].values*12
+                p_sec = merged_s['prec'].values*12
+                t_prec = merged_b['threshold_prec'].values
+                
+                # 1. Schwellenwert prüfen (Ignoriere NaNs)
+                with np.errstate(invalid='ignore'):
+                    is_crit_base = p_base < t_prec
+                    is_crit_sec = p_sec < t_prec
+
+                if ssp == 245 and y == 2030:
+                    print(f"\n--- BEISPIEL-ZELLE 0 IN 2030 (SSP245) ---")
+                    print(f"Historischer Schnitt: {df_hist['mean_annual_prec'].iloc[0]:.0f} mm")
+                    print(f"Kritischer Schwellenwert (75%): {t_prec[0]:.0f} mm")
+                    print(f"Niederschlag Raw-Szenario: {p_base[0]:.0f} mm")
+                    print(f"Niederschlag Sec-Szenario: {p_sec[0]:.0f} mm")
+                    print(f"Verlust bei Raw > 25%? {is_crit_base[0]}")
+                    print(f"Verlust bei Sec > 25%? {is_crit_sec[0]}\n")
+                
+                # 2. Flächenanteil speichern
+                pct_base[ssp].append((np.sum(is_crit_base) / num_cells) * 100)
+                pct_sec[ssp].append((np.sum(is_crit_sec) / num_cells) * 100)
+                
+                # 3. Time of Emergence aktualisieren
+                mask_base = is_crit_base & (toe_base[ssp] == 9999)
+                toe_base[ssp][mask_base] = y
+                
+                mask_sec = is_crit_sec & (toe_sec[ssp] == 9999)
+                toe_sec[ssp][mask_sec] = y
+            else:
+                pct_base[ssp].append(np.nan)
+                pct_sec[ssp].append(np.nan)
+
+    print("\n--- SCHRITT 3: Erstelle Visualisierung ---")
+    fig = plt.figure(figsize=(16, 16), dpi=150)
+    gs = fig.add_gridspec(3, 3, height_ratios=[1.2, 1, 1], hspace=0.35)
+    
+    # ----------------------------------------------------
+    # PLOT OBEN: Zeitreihe
+    # ----------------------------------------------------
+    ax_ts = fig.add_subplot(gs[0, :])
+    colors = {245: "#f5a623", 370: "#d0021b", 585: "#9013fe"}
+    
+    for ssp in scenarios:
+        valid_idx = ~np.isnan(pct_base[ssp])
+        valid_years = years_future[valid_idx]
+        
+        if len(valid_years) > 0:
+            ax_ts.plot(valid_years, np.array(pct_base[ssp])[valid_idx], color=colors[ssp], 
+                       linewidth=2.5, linestyle="-", label=f"SSP{ssp} ({scenario_1})")
+            
+            ax_ts.plot(valid_years, np.array(pct_sec[ssp])[valid_idx], color=colors[ssp], 
+                       linewidth=3.0, linestyle=":", label=f"SSP{ssp} ({scenario_2})")
+        
+    ax_ts.set_title(f"Amazon Area Experiencing >25% Precipitation Loss\n({scenario_1} vs {scenario_2})", fontsize=16, fontweight="bold", pad=10)
+    ax_ts.set_ylabel("Affected Area [% of Grid Cells]", fontsize=12)
+    ax_ts.set_xlabel("Year", fontsize=12)
+    ax_ts.grid(True, linestyle="--", alpha=0.5)
+    ax_ts.spines["top"].set_visible(False)
+    ax_ts.spines["right"].set_visible(False)
+    
+    ax_ts.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), frameon=True, ncol=2, fontsize=11)
+    ax_ts.set_xlim(years_future[0], years_future[-1])
+    ax_ts.set_ylim(0, 100)
+    
+    # ----------------------------------------------------
+    # PLOTS UNTEN: Time of Emergence Karten
+    # ----------------------------------------------------
+    cmap = plt.cm.YlOrRd 
+    cmap.set_over("lightgrey")
+    norm = mcolors.Normalize(vmin=years_future[0], vmax=years_future[-1])
+
+    for idx, ssp in enumerate(scenarios):
+        # REIHE 2: Scenario 1
+        ax_map_base = fig.add_subplot(gs[1, idx])
+        ax_map_base.scatter(
+            x=plot_lons, y=plot_lats, c=toe_base[ssp], 
+            cmap=cmap, norm=norm, s=100, marker="s", alpha=0.9, edgecolors="none"
+        )
+        ax_map_base.set_title(f"SSP {ssp} ({scenario_1})", fontsize=13, fontweight="bold")
+        if idx == 0: ax_map_base.set_ylabel("Latitude", fontsize=10)
+        ax_map_base.grid(True, linestyle="--", alpha=0.3)
+        ax_map_base.set_xticklabels([]) 
+
+        # REIHE 3: Scenario 2
+        ax_map_sec = fig.add_subplot(gs[2, idx])
+        sc = ax_map_sec.scatter(
+            x=plot_lons, y=plot_lats, c=toe_sec[ssp], 
+            cmap=cmap, norm=norm, s=100, marker="s", alpha=0.9, edgecolors="none"
+        )
+        ax_map_sec.set_title(f"SSP {ssp} ({scenario_2})", fontsize=13, fontweight="bold")
+        if idx == 0: ax_map_sec.set_ylabel("Latitude", fontsize=10)
+        ax_map_sec.set_xlabel("Longitude", fontsize=10)
+        ax_map_sec.grid(True, linestyle="--", alpha=0.3)
+
+    cbar_ax = fig.add_axes([0.93, 0.12, 0.015, 0.45])
+    cbar = fig.colorbar(sc, cax=cbar_ax, extend='max')
+    cbar.set_label("Year of Crossing -25% Threshold\n(Grey = Never)", fontsize=12)
+
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, f"Precipitation_Loss_Analysis_{scenario_1}_vs_{scenario_2}.png")
+    
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Plot erfolgreich gespeichert: {out_path}")
+    
+
+
 
 if __name__ == "__main__":
 
@@ -518,3 +692,10 @@ if __name__ == "__main__":
     #plot_Clustering_relative_comparison(threshold_val=1.14, scenario_1="Raw", scenario_2="Sec", show_monthly=True)
     #plot_Clustering_relative_comparison(threshold_val=1.14, scenario_1="Raw", scenario_2="BaU", show_monthly=True)
     #plot_Clustering_relative_comparison(threshold_val=1.14, scenario_1="Raw", scenario_2="Gov", show_monthly=True)
+
+# Plot Robustness Analysis (Precipitation Loss)
+    plot_combined_precipitation_loss_from_csv(scenario_1="Raw", scenario_2="Sec", metric_threshold=1.1514)
+    plot_combined_precipitation_loss_from_csv(scenario_1="Raw", scenario_2="BaU", metric_threshold=1.1514)
+    plot_combined_precipitation_loss_from_csv(scenario_1="Raw", scenario_2="Gov", metric_threshold=1.1514)
+
+    
