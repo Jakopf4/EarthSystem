@@ -91,8 +91,8 @@ def process_historical_data():
 
 def process_historical_spatial_average():
     """
-    Berechnet den gesamten historischen Durchschnitt (1950-2014)
-    für jede der 416 Gitterzellen und speichert das Ergebnis
+    Berechnet den gesamten historischen Durchschnitt (1950-2014) UND die
+    Standardabweichung für jede der 416 Gitterzellen und speichert das Ergebnis
     inklusive Koordinaten (Lat/Lon) als CSV.
     """
     historical_file = "../1-data/historical/e_p_moisture_network_amazon_historical.nc"
@@ -103,10 +103,9 @@ def process_historical_spatial_average():
         print(f"FEHLER: Historische Datei nicht gefunden: {historical_file}")
         return
 
-    print("\nBerechne räumlichen historischen Durchschnitt (1950-2014) pro Zelle...")
+    print("\nBerechne räumlichen historischen Durchschnitt und Standardabweichung (1950-2014) pro Zelle...")
 
     years = range(1950, 2015)
-    num_years = len(years)
 
     with xr.open_dataset(historical_file) as ds:
         try:
@@ -117,33 +116,44 @@ def process_historical_spatial_average():
             print("FEHLER: Konnte 'latitudes' oder 'longitudes' nicht in der Datei finden.")
             return
 
-        num_cells = len(lats)
-        prec_sum = np.zeros(num_cells)
-        evap_sum = np.zeros(num_cells)
+        # Listen vorbereiten, um die Arrays aller Jahre zu sammeln
+        all_prec_years = []
+        all_evap_years = []
 
         for year in years:
             try:
-                prec_sum += ds[f"annual_prec_amazon_{year}"].values
-                evap_sum += ds[f"annual_evap_amazon_{year}"].values
+                # Arrays der einzelnen Jahre (Länge 416) einlesen und sammeln
+                all_prec_years.append(ds[f"annual_prec_amazon_{year}"].values)
+                all_evap_years.append(ds[f"annual_evap_amazon_{year}"].values)
             except KeyError as e:
                 print(f"Warnung: Daten für Jahr {year} fehlen ({e}).")
 
-        # Durchschnitt berechnen
-        prec_mean = prec_sum / num_years
-        evap_mean = evap_sum / num_years
+        # In numpy-Matrizen umwandeln mit Shape (Anzahl_Jahre, 416)
+        prec_matrix = np.array(all_prec_years)
+        evap_matrix = np.array(all_evap_years)
 
-        # DataFrame für jede einzelne Zelle erstellen
+        # Mittelwert über die Jahre berechnen (axis=0 rechnet vertikal über die Zeilen/Jahre)
+        prec_mean = np.mean(prec_matrix, axis=0)
+        evap_mean = np.mean(evap_matrix, axis=0)
+
+        # NEU: Standardabweichung über die Jahre berechnen
+        prec_std = np.std(prec_matrix, axis=0)
+        evap_std = np.std(evap_matrix, axis=0)
+
+        # DataFrame für jede einzelne Zelle erstellen mit den neuen statistischen Spalten
         df_spatial = pd.DataFrame({
             "lat": lats,
             "lon": lons,
             "mean_annual_prec": prec_mean,
-            "mean_annual_evap": evap_mean
+            "std_annual_prec": prec_std,
+            "mean_annual_evap": evap_mean,
+            "std_annual_evap": evap_std
         })
 
         out_path = out_dir / "historical_spatial_average_per_cell.csv"
         df_spatial.to_csv(out_path, index=False)
 
-        print(f"-> Räumliche Durchschnitts-CSV erfolgreich erstellt: {out_path}")
+        print(f"-> Räumliche Statistik-CSV erfolgreich erstellt: {out_path}")
 
 
 if __name__ == "__main__":
