@@ -34,7 +34,6 @@ def process_historical_data():
                 ann_evap_sum = np.nanmean(ds[f"annual_evap_amazon_{year}"].values)
 
                 # Da der Bug behoben ist, übernehmen wir die echten Jahressummen direkt.
-                # Keine Teilung durch 12 mehr nötig!
                 yearly_records.append({
                     "year": year,
                     "threshold": "None", # Kein Netzwerk vorhanden
@@ -47,7 +46,6 @@ def process_historical_data():
                 })
 
                 # --- 2. MONATLICHE DATEN ---
-                # Shape ist vermutlich (12, lat, lon) oder (12, 416)
                 mon_prec_array = ds[f"monthly_prec_amazon_{year}"].values
                 mon_evap_array = ds[f"monthly_evap_amazon_{year}"].values
 
@@ -92,8 +90,8 @@ def process_historical_data():
 def process_historical_spatial_average():
     """
     Berechnet den gesamten historischen Durchschnitt (1950-2014) UND die
-    Standardabweichung für jede der 416 Gitterzellen und speichert das Ergebnis
-    inklusive Koordinaten (Lat/Lon) als CSV.
+    Standardabweichungen (sowohl auf Basis der Jahressummen als auch unter
+    Berücksichtigung aller monatlichen Schwankungen) für jede der 416 Gitterzellen.
     """
     historical_file = "../1-data/historical/e_p_moisture_network_amazon_historical.nc"
     out_dir = Path("../3-processing/processed-data/timeseries_historical")
@@ -103,7 +101,7 @@ def process_historical_spatial_average():
         print(f"FEHLER: Historische Datei nicht gefunden: {historical_file}")
         return
 
-    print("\nBerechne räumlichen historischen Durchschnitt und Standardabweichung (1950-2014) pro Zelle...")
+    print("\nBerechne räumliche Statistiken (inkl. monatlicher Schwankungen 1950-2014) pro Zelle...")
 
     years = range(1950, 2015)
 
@@ -116,44 +114,62 @@ def process_historical_spatial_average():
             print("FEHLER: Konnte 'latitudes' oder 'longitudes' nicht in der Datei finden.")
             return
 
-        # Listen vorbereiten, um die Arrays aller Jahre zu sammeln
+        # Listen für jährliche und monatliche Daten-Arrays vorbereiten
         all_prec_years = []
         all_evap_years = []
+        all_prec_months = []
+        all_evap_months = []
 
         for year in years:
             try:
-                # Arrays der einzelnen Jahre (Länge 416) einlesen und sammeln
+                # 1. Jährliche Daten sammeln (Länge 416)
                 all_prec_years.append(ds[f"annual_prec_amazon_{year}"].values)
                 all_evap_years.append(ds[f"annual_evap_amazon_{year}"].values)
+                
+                # 2. Monatliche Daten sammeln (Shape jeweils 12, 416)
+                all_prec_months.append(ds[f"monthly_prec_amazon_{year}"].values)
+                all_evap_months.append(ds[f"monthly_evap_amazon_{year}"].values)
             except KeyError as e:
                 print(f"Warnung: Daten für Jahr {year} fehlen ({e}).")
 
-        # In numpy-Matrizen umwandeln mit Shape (Anzahl_Jahre, 416)
-        prec_matrix = np.array(all_prec_years)
-        evap_matrix = np.array(all_evap_years)
+        # In numpy-Matrizen umwandeln
+        # Jährliche Matrizen haben Shape (65, 416)
+        prec_annual_matrix = np.array(all_prec_years)
+        evap_annual_matrix = np.array(all_evap_years)
+        
+        # Monatliche Daten stapeln zu Shape (65 * 12, 416) -> (780, 416)
+        prec_monthly_matrix = np.vstack(all_prec_months)
+        evap_monthly_matrix = np.vstack(all_evap_months)
 
-        # Mittelwert über die Jahre berechnen (axis=0 rechnet vertikal über die Zeilen/Jahre)
-        prec_mean = np.mean(prec_matrix, axis=0)
-        evap_mean = np.mean(evap_matrix, axis=0)
+        # --- STATISTIKEN BERECHNEN ---
+        # 1. Jährliche Mittelwerte
+        prec_mean = np.mean(prec_annual_matrix, axis=0)
+        evap_mean = np.mean(evap_annual_matrix, axis=0)
 
-        # NEU: Standardabweichung über die Jahre berechnen
-        prec_std = np.std(prec_matrix, axis=0)
-        evap_std = np.std(evap_matrix, axis=0)
+        # 2. Jährliche Standardabweichung (Schwankung von Jahr zu Jahr)
+        prec_annual_std = np.std(prec_annual_matrix, axis=0)
+        evap_annual_std = np.std(evap_annual_matrix, axis=0)
 
-        # DataFrame für jede einzelne Zelle erstellen mit den neuen statistischen Spalten
+        # 3. NEU: Monatliche Standardabweichung (Schwankung inklusive Saisonalität Trocken-/Regenzeit)
+        prec_monthly_std = np.std(prec_monthly_matrix, axis=0)
+        evap_monthly_std = np.std(evap_monthly_matrix, axis=0)
+
+        # DataFrame für jede einzelne Zelle erstellen mit allen Statistiken
         df_spatial = pd.DataFrame({
             "lat": lats,
             "lon": lons,
             "mean_annual_prec": prec_mean,
-            "std_annual_prec": prec_std,
+            "std_annual_prec": prec_annual_std,
+            "std_monthly_prec": prec_monthly_std,   # <--- NEU!
             "mean_annual_evap": evap_mean,
-            "std_annual_evap": evap_std
+            "std_annual_evap": evap_annual_std,
+            "std_monthly_evap": evap_monthly_std    # <--- NEU!
         })
 
         out_path = out_dir / "historical_spatial_average_per_cell.csv"
         df_spatial.to_csv(out_path, index=False)
 
-        print(f"-> Räumliche Statistik-CSV erfolgreich erstellt: {out_path}")
+        print(f"-> Räumliche Statistik-CSV (jährlich & monatlich) erfolgreich erstellt: {out_path}")
 
 
 if __name__ == "__main__":
